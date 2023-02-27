@@ -1,0 +1,202 @@
+telegramm:
+
+  sensor:
+    - platform: template
+      sensors:
+
+        unavailable_now_light:
+          friendly_name: "Всего недоступных светильников - "
+          entity_id:
+            - sensor.time
+          value_template: "{{states.light | selectattr ('state', 'equalto', 'unavailable') | list | length}}"
+          icon_template: mdi:counter
+
+        unavailable_now_switch:
+          friendly_name: "Всего недоступных реле - "
+          entity_id:
+            - sensor.time
+          value_template: "{{states.switch | selectattr ('state', 'equalto', 'unavailable') | list | length}}"
+          icon_template: mdi:counter
+
+        unavailable_now_sensor:
+          friendly_name: "Всего недоступных сенсоров - "
+          entity_id:
+            - sensor.time
+          value_template: "{{states.sensor | selectattr ('state', 'equalto', 'unavailable') | list | length}}"
+          icon_template: mdi:counter
+
+        unavailable_now_binary_sensor:
+          friendly_name: "Всего недоступных бинарных сенсоров - "
+          entity_id:
+            - sensor.time
+          value_template: "{{states.binary_sensor | selectattr ('state', 'equalto', 'unavailable') | list | length}}"
+          icon_template: mdi:counter
+
+  script:
+      send_my_love:
+        alias: send my love
+        sequence:
+        - service: notify.telegram_anna
+          data:
+            message: |
+              I love you ! {{"\U0001F495"}}{{"\U0001F495"}}{{"\U0001F495"}}
+
+      system_report:
+        alias: Отправка отчета о состоянии системы
+        sequence:
+          - service: notify.telegram_alex
+            data:
+              message: |
+                  {{"\U0001F4AC"}} Головний сервер IntelNuc
+                  {{"\U0001F4A1"}} Ламп недоступно - {{ states('sensor.unavailable_now_light') }} 
+                  {{"\U0001F50C"}} Вимикачів недоступно - {{ states('sensor.unavailable_now_switch') }} 
+                  {{"\U0001F321"}} Сенсорів недоступно - {{ states('sensor.unavailable_now_sensor') }} 
+                  {{"\U0001F51F"}} Бінарних сенсорів недоступно - {{ states('sensor.unavailable_now_binary_sensor') }} 
+
+  automation:
+
+      - id: system status report
+        alias: system_status_query
+        initial_state: true
+        trigger:
+           - platform: homeassistant
+             event: start
+        action:
+           - service: notify.telegram_alex
+             data:
+               message: | 
+                   {{"\U0001F4AC"}} Головний сервер IntelNuc
+                   {{"\U0001F567"}} Зафіксований запуск об {{ states('sensor.time') }} 
+                   {{"\U0001F4C3"}} Звіт про стану очікується через 1 хвилину...
+           - delay: 00:01:10
+           - service: script.turn_on
+             entity_id: script.system_report
+
+      # Server status request
+      - id: Запрос на отчет
+        alias: system_status_report
+        initial_state: true
+        trigger:
+          - platform: event
+            event_type: telegram_text
+        condition:
+          - condition: template
+            value_template: >-
+              {{ trigger.event.data.text in ["статус", "Статус", "звіт", "Звіт", "report", "status"] }}
+        action:
+          - service: telegram_bot.send_message
+            data:
+                target: "{{ trigger.event.data.user_id }}"
+                message: |
+                  {{"\U0001F4AC"}} Головний сервер IntelNuc
+                  {{"\U0001F567"}} Звіт через {{ states('sensor.time_date') }}
+                  {{"\U0001F4A1"}} Ламп недоступно - {{ states('sensor.unavailable_now_light') }} 
+                  {{"\U0001F50C"}} Вимикачів недоступно - {{ states('sensor.unavailable_now_switch') }} 
+                  {{"\U0001F321"}} Сенсорів недоступно - {{ states('sensor.unavailable_now_sensor') }} 
+                  {{"\U0001F51F"}} Бінарних сенсорів недоступно - {{ states('sensor.unavailable_now_binary_sensor') }} 
+
+      - id: evening informing
+        alias: send_evening_status
+        initial_state: true
+        trigger:
+          - platform: state
+            entity_id: sensor.current_light_mode_by_time
+            to: "evening"
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Evening is comming... - {{ states('sensor.time') }} "
+
+      - id: Huskins at home by Router
+        alias: my_status_at_home_router
+        initial_state: true
+        trigger:
+          - platform: state
+            entity_id: oleksandr_iphone
+            to: 'home'
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Huskins enters home - {{ states('sensor.time') }} (router)"
+
+      - id: Huskins not at home by Router
+        alias: my_status_not_at_home_router
+        initial_state: true
+        trigger:
+          - platform: state
+            entity_id: oleksandr_iphone
+            to: 'not_home'
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Huskins left home - {{ states('sensor.time') }} (Router)"
+
+
+      - alias: Zone Home 0
+        id: zone_home_no_one
+        trigger:
+          - platform: numeric_state
+            entity_id: zone.home
+            below: 1
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Nobody at home - {{ states('sensor.time') }} (from zone home)"
+
+      - alias: Zone Home 1
+        id: zone_home_anybody
+        trigger:
+          - platform: numeric_state
+            entity_id: zone.home
+            above: 0
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Someone at home NS - {{ states('sensor.time') }} (from zone home)"
+
+      - alias: ha_home_mode_gps_zone_enter
+        id: home_zone_enter
+        trigger:
+          - platform: zone
+            entity_id: device_tracker.oleksandr
+            zone: zone.home
+            event: enter
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Huskins enters home zone - {{ states('sensor.time')}}  (gps in zone)"
+
+      - alias: ha_home_mode_gps_leave
+        id: home_zone_leave
+        trigger:
+          - platform: zone
+            entity_id: device_tracker.oleksandr
+            zone: zone.home
+            event: leave
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Huskins left home - {{ states('sensor.time') }}  (gps in zone)"
+
+      - alias: ha_home_mode_gps
+        id: ha_home_gps_tracker
+        trigger:
+          - platform: state
+            entity_id: device_tracker.oleksandr
+            to: 'home'
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Huskins enters home - {{ states('sensor.time')}}  (gps)"
+
+      - alias: ha_not_home_mode_gps
+        id: ha_not_home_gps_tracker
+        trigger:
+          - platform: state
+            entity_id: device_tracker.oleksandr
+            to: 'not_home'
+        action:
+          - service: notify.telegram_alex
+            data:
+              message: "Huskins left home - {{ states('sensor.time') }}  (gps)"
+

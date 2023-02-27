@@ -1,0 +1,23 @@
+light_on_bath:
+  alias: Ввімкнення світла у ванній
+  sequence:
+    - service: switch.turn_on
+      entity_id: switch.aquara_wall_switch_d2_bath_left
+      
+light_off_bath:
+  alias: Вимкнення світла у ванній
+  sequence:
+    - service: switch.turn_off
+      entity_id: switch.aquara_wall_switch_d2_bath_left
+      
+ventilation_on_bath:
+  alias: Ввімкнення вентиляції у ванній
+  sequence:
+    - service: switch.turn_on
+      entity_id: switch.aquara_wall_switch_d2_bath_right
+      
+ventilation_off_bath:
+  alias: Вимкнення вентиляції у ванній
+  sequence:
+    - service: switch.turn_off
+      entity_id: switch.aquara_wall_switch_d2_bath_right

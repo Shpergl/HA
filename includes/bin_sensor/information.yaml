@@ -1,0 +1,13 @@
+  # Air alert Kiyv
+  - platform: template
+    sensors:
+      kyiv_alert:
+        friendly_name: "Тривога Київ"
+        device_class: safety
+        value_template: >
+          {{ is_state("binary_sensor.m_kiyiv_air", "on") or
+             is_state("binary_sensor.m_kiyiv_artillery", "on") or
+             is_state("binary_sensor.m_kiyiv_chemical", "on") or
+             is_state("binary_sensor.m_kiyiv_nuclear", "on") or
+             is_state("binary_sensor.m_kiyiv_unknown", "on") or
+             is_state("binary_sensor.m_kiyiv_urban_fights", "on") }}

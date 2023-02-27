@@ -1,0 +1,68 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+homeassistant:
+    name: My Smart Home
+    latitude: !secret home_latitude
+    longitude: !secret home_longitude
+    elevation: 179
+    unit_system: metric
+    time_zone: Europe/Kiev
+    country: UA
+    
+    packages: !include_dir_merge_named includes/packages
+
+lovelace:
+  mode: yaml
+
+# Text to speech
+tts:
+  - platform: google_translate
+
+# External files includes
+group: !include includes/groups.yaml
+
+script: !include includes/scripts.yaml
+scene: !include includes/scenes.yaml
+recorder: !include includes/recorder.yaml
+yeelight: !include includes/yeelight.yaml
+
+#External directory includes
+sensor: !include_dir_merge_list includes/sensor
+switch: !include_dir_merge_list includes/switches
+automation: !include_dir_merge_list includes/automation
+binary_sensor: !include_dir_merge_list includes/bin_sensor
+zone: !include includes/zones.yaml
+
+# Example configuration.yaml entry
+media_player:
+  - platform: xiaomi_tv
+    host: 192.168.1.9
+    name: Телевизор в зале
+    
+wake_on_lan: # enables `wake_on_lan` domain
+media_extractor: # enables `media_extractor` domain
+samsungtv:
+  - host: 192.168.1.23
+    name: Телевизор у вітальні
+    turn_on_action:
+      - service: wake_on_lan.send_magic_packet
+        data:
+          mac: A0:D7:F3:6D:1D:A6
+
+telegram_bot:
+  - platform: polling
+    api_key: !secret api_key_bot
+    allowed_chat_ids:
+      - !secret telegram_id_alex
+      - !secret telegram_id_anna
+
+notify:
+  - name: telegram_alex
+    platform: telegram
+    chat_id: !secret telegram_id_alex
+
+  - name: telegram_anna
+    platform: telegram
+    chat_id: !secret telegram_id_anna

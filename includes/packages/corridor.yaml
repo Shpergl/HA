@@ -1,0 +1,112 @@
+corridor:
+
+  homeassistant:
+     customize:
+         light.corridor_light:
+           friendly_name: Світло у коридорі
+         light.front_door_light:
+           friendly_name: Світло на сходах
+         light.yeelight_strip_corridor_mirror:
+           friendly_name: Підсвітка дзеркала в коридорі
+
+  light:
+    - platform: switch
+      name: corridor_light
+      entity_id: switch.aqara_wall_switch_d2_corridor_left
+
+    - platform: switch
+      name: front_door_light
+      entity_id: switch.aqara_wall_switch_d2_corridor_right
+
+
+  automation:
+
+    # Ввімкнення освітлення
+    - alias: corridor_light_on
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+       # - platform: state
+        #  entity_id: sensor.aqara_wall_switch_d2_corridor_action
+          #to: 'single_left'
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.aqara_motion_sensor_corridor_occupancy
+          to: 'on'
+      condition:
+        - condition: numeric_state
+          entity_id: sensor.aqara_motion_sensor_corridor_illuminance_lux
+          below: 4
+      action:
+        - choose:
+          - conditions:
+              # Day time
+              - condition: state
+                entity_id: light.corridor_light
+                state: 'off'
+              - condition: state
+                entity_id: binary_sensor.day_time_light
+                state: 'on'
+            sequence:
+              - service: light.turn_on
+                entity_id: light.corridor_light
+          - conditions:
+              # Night time
+              - condition: state
+                entity_id: light.yeelight_strip_corridor_mirror
+                state: 'off'
+              - condition: state
+                entity_id: binary_sensor.night_time
+                state: 'on'
+            sequence:
+              - service: light.turn_on
+                entity_id: light.yeelight_strip_corridor_mirror
+                data:
+                  rgb_color: [ 255, 0, 255 ]
+                  brightness: 100
+          - conditions:
+              # Late night time
+              - condition: state
+                entity_id: light.yeelight_strip_corridor_mirror
+                state: 'off'
+              - condition: state
+                entity_id: binary_sensor.late_night_time
+                state: 'on'
+            sequence:
+              - service: light.turn_on
+                entity_id: light.yeelight_strip_corridor_mirror
+                data:
+                  rgb_color: [ 255, 0, 255 ]
+                  brightness: 20
+
+
+    # Вимкнення освітлення
+    - alias: corridor_light_off
+      initial_state: true
+      trigger:
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.aqara_motion_sensor_corridor_occupancy
+          to: 'off'
+      action:
+        - choose:
+            - conditions:
+                - condition: state
+                  entity_id: binary_sensor.day_time_light
+                  state: 'on'
+                - condition: state
+                  entity_id: light.corridor_light
+                  state: 'on'
+              sequence:
+                - service: light.turn_off
+                  entity_id: light.corridor_light
+            - conditions:
+                - condition: state
+                  entity_id: binary_sensor.night_time_light
+                  state: 'on'
+                - condition: state
+                  entity_id: light.yeelight_strip_corridor_mirror
+                  state: 'on'
+              sequence:
+                - service: light.turn_off
+                  entity_id: light.yeelight_strip_corridor_mirror

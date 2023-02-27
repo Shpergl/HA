@@ -1,0 +1,218 @@
+bath:
+
+  homeassistant:
+    customize:
+      light.bath_light:
+        friendly_name: Світло у ванній
+      fan.bath_fan:
+        friendly_name: Вентиляція у ванній
+
+  template:
+    # Tricky method to give access to constant from secrets.yaml to jinja template
+    - sensor:
+      - name: bath_toilet_delay
+        state: !secret BATH_TOILET_DELAY
+
+  binary_sensor:
+
+  # Сенсор автовідключення світла
+    - platform: template
+      sensors:
+        bath_no_motion:
+          friendly_name: "Автовідключення"
+          value_template: >
+            {{ is_state('light.bath_light', 'on')  
+               and is_state('binary_sensor.aqara_presence_sensor_bath_occupancy', 'off') }}
+          icon_template: >-
+            {% if is_state("binary_sensor.bath_no_motion", "on") %}
+            mdi:timer
+            {% else %}
+            mdi:timer-off
+            {% endif %}
+
+  fan:
+    - platform: template
+      fans:
+        bath_fan:
+          value_template: "{{ states('switch.aqara_wall_switch_d2_bath_right') }}"
+          turn_on:
+            service: switch.turn_on
+            entity_id: switch.aqara_wall_switch_d2_bath_right
+          turn_off:
+            service: switch.turn_off
+            entity_id: switch.aqara_wall_switch_d2_bath_right
+
+  light:
+    - platform: switch
+      name: bath_light
+      entity_id: switch.aqara_wall_switch_d2_bath_left
+
+  timer:
+      bath_light_countdown:
+          name: Люстра вимкнеться через -
+          duration: '00:10:00'
+
+      bath_fan_countdown:
+          name: Вентиляція вимкнеться через -
+          duration: '00:05:00'
+
+  automation:
+
+      # Ввімкнення освітлення
+      - alias: bath_light_on
+        initial_state: true
+        trigger:
+          # Вимикач Aqara
+          - platform: state
+            entity_id: sensor.aqara_wall_switch_d2_bath_action
+            to: 'single_left'
+          # Датчик руху
+          - platform: state
+            entity_id: binary_sensor.aqara_presence_sensor_bath_occupancy
+            to: 'on'
+        condition:
+          - condition: state
+            entity_id: light.bath_light
+            state: 'off'
+        action:
+          - service: light.turn_on
+            entity_id: light.bath_light
+
+      # Вимкнення освітлення
+      - alias: bath_light_off
+        initial_state: true
+        trigger:
+       # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_bath_action
+          to: 'single_left'
+        # Таймер
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.bath_light_countdown
+        condition:
+          - condition: state
+            entity_id: light.bath_light
+            state: 'on'
+        action:
+          - choose:
+            - conditions:
+              - condition: state
+                entity_id: fan.bath_fan
+                state: 'on'
+              sequence:
+                - service: timer.start
+                  entity_id: timer.bath_fan_countdown
+                - service: light.turn_off
+                  entity_id: light.bath_light
+            default:
+              - service: light.turn_off
+                entity_id: light.bath_light
+
+#      # Автоматическая установка яркости
+#      - alias: bath_light_bright
+#        initial_state: true
+#        trigger:
+#        - platform: state
+#          entity_id: sensor.aqara_wall_switch_d2_bath_action
+#          to: 'single_left'
+#        action:
+#        - service: switch.turn_on
+#          entity_id:
+#            - switch.aqara_wall_switch_d2_bath_left
+#          data_template:
+#             brightness_pct: >
+#               {%- if states("binary_sensor.late_night_time") == 'on' -%}
+#               25
+#               {%- elif states("binary_sensor.day_time") == 'on'  -%}
+#               100
+#               {%- else -%}
+#               70
+#               {% endif %}
+#             kelvin: 4000
+
+      # Таймер автовідключення
+      - alias: bath_light_timer_start
+        initial_state: true
+        trigger:
+        # Умови для запуска таймера автовідключення
+        - platform: state
+          entity_id: binary_sensor.bath_no_motion
+          to: 'on'
+        action:
+          service: timer.start
+          entity_id: timer.bath_light_countdown
+          data_template:
+              duration: > 
+               {%- if states("binary_sensor.night_time_light") == 'on' -%}
+               00:00:10
+               {%- elif states("binary_sensor.day_time_light") == 'on'  -%}
+               {{ states('sensor.bath_toilet_delay') }}
+               {%- else -%}
+               00:00:45
+               {% endif %} 
+
+      # Скидання таймера при вимкненні
+      - alias: bath_light_timer_cancel
+        initial_state: true
+        trigger:
+        - platform: state
+          entity_id: binary_sensor.bath_no_motion
+          to: 'off'
+        action:
+        - service: timer.cancel
+          entity_id: timer.bath_light_countdown
+
+      # Вмикання вентиляції
+      - alias: bath_fan_on
+        initial_state: true
+        trigger:
+          # Вимикач Aqara
+          - platform: state
+            entity_id: sensor.aqara_wall_switch_d2_bath_action
+            to: 'single_right'
+          # Датчик вологості
+          - platform: numeric_state
+            entity_id: sensor.aqara_temperature_sensor_bath_humidity
+            above: 50
+        condition:
+          - condition: state
+            entity_id: fan.bath_fan
+            state: 'off'
+        action:
+          - service: fan.turn_on
+            entity_id: fan.bath_fan
+
+      # Вимикання вентиляції
+      - alias: bath_fan_off
+        initial_state: true
+        trigger:
+          # Вимикач Aqara
+          - platform: state
+            entity_id: sensor.aqara_wall_switch_d2_bath_action
+            to: 'single_right'
+          # Таймер
+          - platform: event
+            event_type: timer.finished
+            event_data:
+              entity_id: timer.bath_fan_countdown
+        condition:
+          - condition: state
+            entity_id: fan.bath_fan
+            state: 'on'
+        action:
+          - choose:
+            - conditions:
+              # Перезапускаємо таймер
+              - condition: numeric_state
+                entity_id: sensor.aqara_temperature_sensor_bath_humidity
+                above: 50
+              sequence:
+                - service: timer.start
+                  entity_id: timer.bath_fan_countdown
+            default:
+              - service: fan.turn_off
+                entity_id: fan.bath_fan
+              - service: timer.cancel
+                entity_id: timer.bath_fan_countdown

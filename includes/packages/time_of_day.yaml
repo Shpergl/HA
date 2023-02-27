@@ -1,0 +1,69 @@
+time_of_day:
+
+  template:
+    binary_sensor:
+
+      - name: day_time
+        state: >
+          {{ states('input_datetime.day_time_start') <= now().strftime("%H:%M:%S") < states('input_datetime.evening_time_start') }}
+
+      - name: evening_time
+        state: > 
+          {{ (states('input_datetime.evening_time_start')) <= now().strftime("%H:%M:%S") <= '23:59:59' or
+          '00:00:00' <= now().strftime("%H:%M:%S") < (states('input_datetime.night_time_start')) 
+          }}
+
+      - name: night_time
+        state: >
+          {{ states('input_datetime.night_time_start') <= now().strftime("%H:%M:%S") < states('input_datetime.late_night_time_start') }}
+
+      - name: late_night_time
+        state: >
+          {{ (states('input_datetime.late_night_time_start')) <= now().strftime("%H:%M:%S") < (states('input_datetime.day_time_start'))}}
+
+      - name: day_time_light
+        state: > 
+          {{  is_state('binary_sensor.day_time', 'on') or is_state('binary_sensor.evening_time', 'on') }}
+
+      - name: night_time_light
+        state: >
+            {{  is_state('binary_sensor.night_time', 'on') or is_state('binary_sensor.late_night_time', 'on') }}
+
+  input_datetime:
+    day_time_start:
+      name: "Денний час"
+      has_date: false
+      has_time: true
+      initial: "10:00:00"
+
+    evening_time_start:
+      name: "Вечірній час"
+      has_date: false
+      has_time: true
+      initial: "19:00:00"
+
+    night_time_start:
+      name: "Нічний час"
+      has_date: false
+      has_time: true
+      initial: "02:00:00"
+
+    late_night_time_start:
+      name: "Час відбою"
+      has_date: false
+      has_time: true
+      initial: "03:00:00"
+
+  automation:
+
+   - alias: set_evening_time_start
+     initial_state: true
+     trigger:
+       - platform: state
+         entity_id: sun.sun
+         to: "below_horizon"
+     action:
+       - service: input_datetime.set_datetime
+         entity_id: input_datetime.evening_time_start
+         data:
+           time: "{{ now().strftime('%H:%M:%S') }}"

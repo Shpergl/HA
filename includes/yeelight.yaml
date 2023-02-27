@@ -1,0 +1,12 @@
+devices:
+    192.168.1.11:
+        name: yeelight_strip_tv_bedroom
+        transition: 1000
+        nightlight_switch_type: light
+        model: lightstrip6
+    
+    192.168.1.6:
+        name: yeelight_strip_corridor_mirror
+        transition: 1000
+        nightlight_switch_type: light
+        model: lightstrip6

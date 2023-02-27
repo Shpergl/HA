@@ -1,0 +1,52 @@
+guest_room:
+  
+  homeassistant:
+     customize:
+         light.guest_room_light:
+           friendly_name: Світло у гостьовій кімнаті
+         light.guest_room_light2:
+           friendly_name: Світло гостьовій кімнаті2 (Не юзається зараз)
+
+  light:
+    - platform: switch
+      name: guest_room_light
+      entity_id: switch.aqara_wall_switch_D2_guest_room_right
+
+    # Not used now
+    - platform: switch
+      name: guest_room_light2
+      entity_id: switch.aqara_wall_switch_D2_guest_room_left
+
+  automation:
+
+    # Ввімкнення освітлення
+    - alias: guest_room_light_on
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_D2_guest_room_action
+          to: 'single_right'
+      condition:
+        - condition: state
+          entity_id: light.guest_room_light
+          state: 'off'
+      action:
+        - service: light.turn_on
+          entity_id: light.guest_room_light
+
+    # Вимкнення освітлення
+    - alias: guest_room_light_off
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_D2_guest_room_action
+          to: 'single_right'
+      condition:
+        - condition: state
+          entity_id: light.guest_room_light
+          state: 'on'
+      action:
+        - service: light.turn_off
+          entity_id: light.guest_room_light

@@ -1,0 +1,293 @@
+scene_light:
+
+  scene:
+    - name: lights_out
+      entities:
+        light.yeelight_strip_corridor_mirror: off
+        light.yeelight_strip_tv_bedroom: off
+        light.intellect: off
+        light.bath_light: off
+        light.living_room_garland_light: off
+        light.living_room_mirror_light: off
+
+        light.dining_room_light: off
+        light.corridor_light: off
+        light.front_door_light: off
+        light.guest_room_light: off
+        light.bed_room_light: off
+
+        light.living_room_main_light: off
+        light.living_room_back_light: off
+
+
+    - name: day
+      entities:
+        light.yeelight_strip_corridor_mirror: off
+        light.yeelight_strip_tv_bedroom: off
+        light.intellect: off
+        light.living_room_garland_light: off
+        light.living_room_mirror_light: off
+
+        light.living_room_main_light: off
+        light.living_room_back_light: off
+
+    - name: evening
+      entities:
+        light.yeelight_strip_corridor_mirror:
+          state: on
+          rgb_color: [255, 0, 255]
+          brightness: 128
+        light.intellect:
+          state: on
+          rgb_color: [ 255, 128, 159 ]
+          brightness: 166
+          effect: 'Gradient'
+        light.living_room_garland_light: on
+        light.living_room_mirror_light: on
+
+    - name: night
+      entities:
+        light.living_room_main_light: off
+        light.living_room_back_light: off
+        light.corridor_light: off
+
+
+    - name: late_night
+      entities:
+        light.yeelight_strip_corridor_mirror: off
+        light.yeelight_strip_tv_bedroom: off
+        light.intellect: off
+        light.bath_light: off
+        light.living_room_garland_light: off
+        light.living_room_mirror_light: off
+
+        light.dining_room_light: off
+        light.corridor_light: off
+        light.front_door_light: off
+        light.guest_room_light: off
+        light.bed_room_light: off
+
+        light.living_room_main_light: off
+        light.living_room_back_light: off
+
+    - name: alert
+      entities:
+        light.yeelight_strip_corridor_mirror:
+            state: on
+            rgb_color: [255, 0, 0]
+            brightness: 25
+#            brightness: >
+#                {%- if states("binary_sensor.bath_night") == 'on' -%}
+#                13
+#                {%- else -%}
+#                255
+#                {% endif %}
+        light.intellect:
+            state: on
+            rgb_color: [ 255, 0, 0 ]
+            data_template:
+              brightness: 25
+#              brightness: >
+#                {%- if states("binary_sensor.bath_night") == 'on' -%}
+#                13
+#                {%- else -%}
+#                255
+#                {% endif %}
+            effect: 'Two Dots'
+        light.yeelight_strip_tv_bedroom:
+            state: on
+            rgb_color: [ 255, 0, 0 ]
+            data_template:
+              brightness: 25
+#              brightness: >
+#                {%- if states("binary_sensor.bath_night") == 'on' -%}
+#                13
+#                {%- else -%}
+#                255
+#                {% endif %}
+
+    - name: alert_clear
+      entities:
+         light.yeelight_strip_corridor_mirror:
+            state: on
+            rgb_color: [ 0, 255, 0 ]
+            brightness: 25
+         light.intellect:
+            state: on
+            rgb_color: [ 0, 255, 0 ]
+            brightness: 25
+            effect: 'Solid'
+         light.yeelight_strip_tv_bedroom:
+            state: on
+            rgb_color: [ 0, 255, 0 ]
+            brightness: 25
+
+    - name: alert_light_off
+      entities:
+        light.yeelight_strip_corridor_mirror: off
+        light.yeelight_strip_tv_bedroom: off
+        light.intellect: off
+
+  input_text:
+    selected_light_scene:
+      name: Selected scene before some event
+
+  input_select:
+
+      light_mode:
+        name: light_modes
+        options:
+          - lights_out
+          - day
+          - evening
+          - night
+          - late_night
+#          - cinema
+#          - game
+          - alert
+          - alert_clear
+          - alert_light_off
+        icon: mdi:brightness-percent
+
+  template:
+    - sensor:
+      - name: current_light_mode_by_time
+        state: >
+          {%- if is_state('binary_sensor.evening_time', 'on') -%}
+            evening
+          {%- elif is_state('binary_sensor.night_time', 'on') -%}
+            night
+          {%- elif is_state('binary_sensor.late_night_time', 'on') -%}
+            late_night
+          {%- else -%}
+            day
+          {% endif %}
+
+  automation:
+
+    # Set light mode select from scene change
+    - alias: service_call_light_mode_change
+      initial_state: true
+      trigger:
+        - platform: event
+          event_type: call_service
+          event_data:
+            domain: scene
+            service: turn_on
+      action:
+         - condition: template
+           value_template: "{{ trigger.event.data.service_data.entity_id | replace('scene.', '')
+                            != states('input_select.light_mode')}}"
+         - service: input_select.select_option
+           entity_id: input_select.light_mode
+           data:
+             option: "{{ trigger.event.data.service_data.entity_id | replace('scene.', '') }}"
+
+    # Set light scene from light mode select
+    - alias: input_select_light_mode_change
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: input_select.light_mode
+#      condition:
+#        - condition: state
+#          entity_id: binary_sensor.anyone_at_home
+#          state: on
+      action:
+        - service: scene.turn_on
+          data_template:
+            entity_id: scene.{{trigger.to_state.state}}
+            transition: 2
+
+    # Set light scene by time sensor
+    - alias: change_light_mode_by_time
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: sensor.current_light_mode_by_time
+      action:
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+              option: "{{trigger.to_state.state}}"
+      
+    # Show red light when air alert comes on
+    - alias: alert_light_show
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.kyiv_alert
+          from: 'off'
+          to: 'on'
+      action:
+        - service: input_text.set_value
+          entity_id: input_text.selected_light_scene
+          data:
+            value: "{{ states('input_select.light_mode') }}"
+
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+            option: alert
+        - delay:
+            seconds: 45
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+            option: "{{ states('input_text.selected_light_scene') }}"
+
+    # Show green light when air alert became clear
+    - alias: alert_clear_light_show
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.kyiv_alert
+          from: 'on'
+          to: 'off'
+      action:
+        - service: input_text.set_value
+          entity_id: input_text.selected_light_scene
+          data:
+            value: "{{ states('input_select.light_mode') }}"
+
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+            option: alert_clear
+        - delay:
+            seconds: 45
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+            option: "{{ states('input_text.selected_light_scene') }}"
+
+    # Set lights out when no one at home
+    - alias: turn_off_light_when_last_left_home
+      initial_state: true
+      trigger:
+        - platform: numeric_state
+          entity_id: zone.home
+          below: 1
+      action:
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+            option: lights_out
+
+        - service: automation.turn_off
+          entity_id: automation.input_select_light_mode_change
+
+    # Set previous light scene
+    - alias: turn_on_light_when_first_enters_home
+      initial_state: true
+      trigger:
+        - platform: numeric_state
+          entity_id: zone.home
+          above: 0
+      action:
+        - service: automation.turn_on
+          entity_id: automation.input_select_light_mode_change
+        - service: input_select.select_option
+          entity_id: input_select.light_mode
+          data:
+            option: "{{states('sensor.current_light_mode_by_time')}}"

@@ -1,0 +1,13 @@
+db_url: !secret db_link
+#include:
+#  domains:
+#    - switch
+#    - light
+#    -
+#  entities:
+#    - sensor.maria_db_size
+exclude:
+  entities:
+    - sensor.date_time
+    - sensor.time
+
