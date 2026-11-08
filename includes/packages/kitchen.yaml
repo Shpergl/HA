@@ -8,7 +8,8 @@ kitchen:
     - binary_sensor:
         - name: "Автовідключення світла у кухні"
           unique_id: kitchen_no_motion_sensor
-          state: >
+          default_entity_id: binary_sensor.kitchen_no_motion
+          state: &kitchen_ready_for_countdown >
             {{ is_state('light.kitchen_light', 'on') and 
               is_state('binary_sensor.aqara_presence_sensor_kitchen_occupancy', 'off') }}
           icon: >-
@@ -51,26 +52,45 @@ kitchen:
             entity_id: light.kitchen_light
 
     # Таймер автовідключення
-    - alias: kitchen_light_timer_start
+    - id: kitchen_auto_off_countdown_sync
+      alias: kitchen_light_timer_start
       initial_state: true
+      mode: restart
       trigger:
-        # Умови для запуска таймера автовідключення
+        - platform: homeassistant
+          event: start
         - platform: state
-          entity_id: binary_sensor.kitchen_no_motion
-          to: "on"
+          entity_id:
+            - light.kitchen_light
+            - binary_sensor.aqara_presence_sensor_kitchen_occupancy
+          to: null
       action:
-        - action: timer.start
-          target:
-            entity_id: timer.kitchen_light_countdown
-          data:
-            duration: >
-              {%- if states("binary_sensor.night_time_light") == 'on' -%}
-                00:00:10
-              {%- elif states("binary_sensor.day_time_light") == 'on'  -%}
-                00:00:30
-              {%- else -%}
-                00:00:45
-              {%- endif %}
+        - if:
+            - condition: template
+              value_template: *kitchen_ready_for_countdown
+          then:
+            - condition: state
+              entity_id: timer.kitchen_light_countdown
+              state: "idle"
+            - action: timer.start
+              target:
+                entity_id: timer.kitchen_light_countdown
+              data:
+                duration: >
+                  {%- if states("binary_sensor.night_time_light") == 'on' -%}
+                    00:00:10
+                  {%- elif states("binary_sensor.day_time_light") == 'on'  -%}
+                    00:00:30
+                  {%- else -%}
+                    00:00:45
+                  {%- endif %}
+          else:
+            - condition: state
+              entity_id: timer.kitchen_light_countdown
+              state: "active"
+            - action: timer.cancel
+              target:
+                entity_id: timer.kitchen_light_countdown
 
     # Вимкнення освітлення
     - alias: kitchen_light_off
@@ -82,6 +102,8 @@ kitchen:
           event_data:
             entity_id: timer.kitchen_light_countdown
       action:
+        - condition: template
+          value_template: *kitchen_ready_for_countdown
         - choose:
             - conditions:
                 - condition: state
@@ -91,17 +113,4 @@ kitchen:
                 - action: light.turn_off
                   target:
                     entity_id: light.kitchen_light
-
-    # Скидання таймера при вимкненні
-    - alias: kitchen_light_timer_cancel
-      initial_state: true
-      trigger:
-        - platform: state
-          entity_id: binary_sensor.kitchen_no_motion
-          to: "off"
-      action:
-        - action: timer.cancel
-          target:
-            entity_id: timer.kitchen_light_countdown
-
 

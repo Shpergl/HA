@@ -13,7 +13,8 @@ bath:
     - binary_sensor:
         - name: "Автовідключення світла у ванній"
           unique_id: bath_no_motion_sensor
-          state: >
+          default_entity_id: binary_sensor.bath_no_motion
+          state: &bath_ready_for_countdown >
             {{ is_state('light.bath_light', 'on')  
               and is_state('binary_sensor.aqara_presence_sensor_bath_occupancy', 'off') }}
           icon: >-
@@ -86,6 +87,7 @@ bath:
           to: "single_left"
         # Таймер
         - platform: event
+          id: countdown_finished
           event_type: timer.finished
           event_data:
             entity_id: timer.bath_light_countdown
@@ -94,6 +96,8 @@ bath:
           entity_id: light.bath_light
           state: "on"
       action:
+        - condition: template
+          value_template: "{{ trigger.id | default('') != 'countdown_finished' or is_state('binary_sensor.aqara_presence_sensor_bath_occupancy', 'off') }}"
         - choose:
             - conditions:
                 - condition: state
@@ -112,38 +116,45 @@ bath:
                 entity_id: light.bath_light
 
     # Таймер автовідключення
-    - alias: bath_light_timer_start
+    - id: bath_auto_off_countdown_sync
+      alias: bath_light_timer_start
       initial_state: true
+      mode: restart
       trigger:
-        # Умови для запуска таймера автовідключення
+        - platform: homeassistant
+          event: start
         - platform: state
-          entity_id: binary_sensor.bath_no_motion
-          to: "on"
+          entity_id:
+            - light.bath_light
+            - binary_sensor.aqara_presence_sensor_bath_occupancy
+          to: null
       action:
-        - action: timer.start
-          target:
-            entity_id: timer.bath_light_countdown
-          data:
-            duration: >
-              {%- if states("binary_sensor.night_time_light") == 'on' -%}
-                00:00:10
-              {%- elif states("binary_sensor.day_time_light") == 'on'  -%}
-                00:00:45
-              {%- else -%}
-                00:00:45
-              {%- endif %}
-
-    # Скидання таймера при вимкненні
-    - alias: bath_light_timer_cancel
-      initial_state: true
-      trigger:
-        - platform: state
-          entity_id: binary_sensor.bath_no_motion
-          to: "off"
-      action:
-        - action: timer.cancel
-          target:
-            entity_id: timer.bath_light_countdown
+        - if:
+            - condition: template
+              value_template: *bath_ready_for_countdown
+          then:
+            - condition: state
+              entity_id: timer.bath_light_countdown
+              state: "idle"
+            - action: timer.start
+              target:
+                entity_id: timer.bath_light_countdown
+              data:
+                duration: >
+                  {%- if states("binary_sensor.night_time_light") == 'on' -%}
+                    00:00:10
+                  {%- elif states("binary_sensor.day_time_light") == 'on'  -%}
+                    00:00:45
+                  {%- else -%}
+                    00:00:45
+                  {%- endif %}
+          else:
+            - condition: state
+              entity_id: timer.bath_light_countdown
+              state: "active"
+            - action: timer.cancel
+              target:
+                entity_id: timer.bath_light_countdown
 
     # Вмикання вентиляції
     - alias: bath_fan_on

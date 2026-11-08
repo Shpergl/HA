@@ -14,6 +14,7 @@ corridor:
   - binary_sensor:
       - name: "Рух у коридорі"
         unique_id: corridor_all_motion_sensor
+        default_entity_id: binary_sensor.corridor_all_motion
         state: >
           {{ is_state('binary_sensor.aqara_motion_sensor_dining_room_occupancy', 'on') or 
              is_state('binary_sensor.aqara_motion_sensor_corridor_occupancy', 'on') or
@@ -21,6 +22,7 @@ corridor:
 
       - name: "Рух на сходах"
         unique_id: front_door_motion_sensor
+        default_entity_id: binary_sensor.front_door_motion
         state: >
           {{ is_state('binary_sensor.aqara_door_sensor_front_door_contact', 'on') or 
              is_state('binary_sensor.frontdoor1_person', 'on') or
