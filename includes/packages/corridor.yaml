@@ -339,8 +339,10 @@ corridor:
           data:
             filename: /config/www/tmp/snapshot-frontdoor1.jpg
           target:
-            entity_id: camera.frontdoor1_sub
-        - action: telegram_bot.send_photo
+            entity_id: >-
+              {{ ['camera.frontdoor1_snapshots_clear', 'camera.frontdoor1_clear', 'camera.frontdoor1_main']
+                 | select('has_value') | first | default('camera.frontdoor1_sub') }}
+        - action: telegram_bot.send_document
           data:
             chat_id:
               - !secret telegram_id_alex
@@ -384,13 +386,15 @@ corridor:
           else:
             - service: camera.snapshot
               data:
-                filename: /config/www/tmp/snapshot-frontdoor1.jpg
+                filename: /config/www/tmp/snapshot-frontdoor1-motion.jpg
               target:
-                entity_id: camera.frontdoor1_sub
-            - action: telegram_bot.send_photo
+                entity_id: >-
+                  {{ ['camera.frontdoor1_snapshots_clear', 'camera.frontdoor1_clear', 'camera.frontdoor1_main']
+                     | select('has_value') | first | default('camera.frontdoor1_sub') }}
+            - action: telegram_bot.send_document
               data:
                 chat_id: !secret telegram_id_alex
-                file: /config/www/tmp/snapshot-frontdoor1.jpg
+                file: /config/www/tmp/snapshot-frontdoor1-motion.jpg
                 caption: "Motion in FrontDoor without camera detection"
 
     - alias: set_input_boolian_when_dogs_bark
@@ -487,8 +491,10 @@ corridor:
           data:
             filename: /config/www/tmp/snapshot-frontdoor2.jpg
           target:
-            entity_id: camera.frontdoor2_sub
-        - action: telegram_bot.send_photo
+            entity_id: >-
+              {{ ['camera.frontdoor2_snapshots_clear', 'camera.frontdoor2_clear', 'camera.frontdoor2_main']
+                 | select('has_value') | first | default('camera.frontdoor2_sub') }}
+        - action: telegram_bot.send_document
           data:
             chat_id:
               - !secret telegram_id_alex

@@ -87,8 +87,10 @@ parking:
           data:
             filename: /config/www/tmp/snapshot-parking.jpg
           target:
-            entity_id: camera.parking_sub
-        - action: telegram_bot.send_photo
+            entity_id: >-
+              {{ ['camera.parking_snapshots_clear', 'camera.parking_clear', 'camera.parking_main']
+                 | select('has_value') | first | default('camera.parking_sub') }}
+        - action: telegram_bot.send_document
           data:
             chat_id:
               - !secret telegram_id_alex
@@ -111,8 +113,10 @@ parking:
           data:
             filename: /config/www/tmp/snapshot-parking1.jpg
           target:
-            entity_id: camera.parking1_sub
-        - action: telegram_bot.send_photo
+            entity_id: >-
+              {{ ['camera.parking1_snapshots_clear', 'camera.parking1_clear', 'camera.parking1_main']
+                 | select('has_value') | first | default('camera.parking1_sub') }}
+        - action: telegram_bot.send_document
           data:
             chat_id: !secret telegram_id_alex
             file: /config/www/tmp/snapshot-parking1.jpg
