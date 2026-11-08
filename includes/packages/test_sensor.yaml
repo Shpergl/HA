@@ -1,0 +1,40 @@
+
+test_sensor:
+
+    homeassistant:
+
+      customize:
+        binary_sensor.test_sensor:
+          friendly_name: Датчик протечки на кухне
+        binary_sensor.test_sensor_2:
+          friendly_name: Датчик протечки в санузле
+    
+    input_button:
+
+      test_sensor:
+        name: Старт тесту сенсорів
+        icon: mdi:reload
+
+
+    template:
+      - trigger:
+    # кнопка на столе
+        - platform: state
+          entity_id: input_button.test_sensor
+          to: 'single'
+        binary_sensor:
+          - name: test_sensor
+            state: True
+            auto_off: 10
+            device_class: moisture
+            
+      - trigger:
+    # кнопка на столе
+        - platform: state
+          entity_id: sensor.0x00158d0001531698_action
+          to: 'single'    
+        binary_sensor:
+          - name: test_sensor_2
+            state: True
+            auto_off: 20
+            device_class: moisture

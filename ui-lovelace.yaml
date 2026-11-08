@@ -1,24 +1,24 @@
 title: Home Assistant Institutska - Сервер
+background: var(--background-image)
 views:
   - title: Главная
     id: main
     icon: mdi:home-assistant
-    
+
     badges:
-        - sensor.time
-        - sensor.date
-        - sensor.maria_db_size
         - person.huskins
         - person.anna
 
     cards:
       - type: vertical-stack
         cards:
-         
-        - type: markdown
-          content: >
-              **Поточний стан**
-        
+
+#        - type: custom:mushroom-chips-card
+#          chips:
+#            - type: entity
+#              entity: sensor.living_room_temperature
+#              icon_color: orange
+
         - type: entities
           show_header_toggle: false
           entities:
@@ -32,9 +32,9 @@ views:
               name: Дата
               icon: mdi:calendar-check-outline
 
-        - type: markdown
-          content: >
-              **Personal Info**
+        - type: custom:mushroom-chips-card
+          chips:
+            - type: menu
 
         - type: iframe
           url: https://alerts.in.ua
@@ -46,10 +46,6 @@ views:
             - entity: binary_sensor.kyiv_alert
               name: Тривога у Києві
 
-
-        - type: markdown
-          content: >
-              **Резервне копіювання**
         - type: entities
           show_header_toggle: false
           entities:
@@ -64,6 +60,7 @@ views:
             - entity: timer.bath_fan_countdown
             - entity: binary_sensor.aqara_presence_sensor_bath_occupancy
             - entity: fan.bath_fan
+            - entity: cover.aqara_curtains_bed_room
 
         - type: entities
           show_header_toggle: false
@@ -75,7 +72,12 @@ views:
             - entity: sensor.date
               name: Дата
               icon: mdi:calendar-check-outline
-     
+              
+            - entity: input_button.open_parking
+            - entity: input_select.theme
+            - entity: input_boolean.dark_mode
+            - entity: input_boolean.theme_alternative
+
       - type: vertical-stack
         cards:     
               
@@ -151,7 +153,8 @@ views:
                 - entity: light.intellect
                 - entity: light.bath_light
                 - entity: light.living_room_garland_light
-                - entity: light.living_room_mirror_light
+                - entity: light.living_room_garland_tv_light
+                - entity: light.tuya_rgb_mirror_light_living_room_2
 
                 - entity: light.dining_room_light
                 - entity: light.corridor_light
@@ -160,6 +163,7 @@ views:
                 - entity: light.bed_room_light
                 - entity: light.living_room_main_light
                 - entity: light.living_room_back_light
+                - entity: light.yeelight_strip_tv_living_room
 
                 - entity: input_select.light_mode
 
@@ -209,12 +213,8 @@ views:
             entities:
               - entity: switch.toggle
                 name: Підсвітка дзеркала зал
-              - entity: binary_sensor.switch
-                name: Підсвітка дзеркала зал
               - entity: switch.toggle_2
                 name: Гірлянда зал
-              - entity: binary_sensor.switch_2
-                name: Підсвітка дзеркала зал
 
               - entity: script.send_message_1
               - entity: script.system_report
@@ -222,6 +222,23 @@ views:
               - entity: sensor.unavailable_now_switch
               - entity: sensor.unavailable_now_sensor
               - entity: sensor.unavailable_now_binary_sensor
+              - entity: curtain.aqara_curtains_bed_room
+
+      - type: grid
+        square: false
+        columns: 1
+        cards:
+          - type: entities
+            entities:
+              - entity: binary_sensor.cam1_motion
+                name: Motion
+              - entity: binary_sensor.cam1_person
+                name: Person
+              - entity: binary_sensor.cam1_vehicle
+                name: Vehicle
+            title: Cam1
+          - type: picture-entity
+            entity: camera.back
 
     
     

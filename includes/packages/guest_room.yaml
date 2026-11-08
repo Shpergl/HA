@@ -3,7 +3,7 @@ guest_room:
   homeassistant:
      customize:
          light.guest_room_light:
-           friendly_name: Світло у гостьовій кімнаті
+           friendly_name: Гостьова
          light.guest_room_light2:
            friendly_name: Світло гостьовій кімнаті2 (Не юзається зараз)
 

@@ -1,0 +1,303 @@
+toilet:
+  homeassistant:
+    customize:
+      light.toilet_light:
+        friendly_name: Туалет
+      light.toilet_ambient_light:
+        friendly_name: Підсвітка у туалеті
+      fan.toilet_fan:
+        friendly_name: Вентиляція у туалеті
+
+  # Усі шаблонні сутності (сенсор, вентилятор, світло) тепер тут
+  template:
+    - binary_sensor:
+        - name: "Автовідключення світла у туалеті"
+          unique_id: toilet_no_motion_sensor
+          state: >
+            {{ (is_state('light.toilet_light', 'on') or is_state('light.toilet_ambient_light', 'on')) and
+              is_state('binary_sensor.aqara_presence_sensor_toilet_occupancy', 'off') }}
+          icon: >-
+            {% if is_state("binary_sensor.toilet_no_motion", "on") %}
+              mdi:timer
+            {% else %}
+              mdi:timer-off
+            {% endif %}
+
+    - fan:
+        - name: "Toilet Fan"
+          unique_id: toilet_fan_virtual
+          state: "{{ states('switch.aqara_wall_switch_d2_toilet_right') }}"
+          turn_on:
+            action: switch.turn_on
+            target:
+              entity_id: switch.aqara_wall_switch_d2_toilet_right
+          turn_off:
+            action: switch.turn_off
+            target:
+              entity_id: switch.aqara_wall_switch_d2_toilet_right
+
+    - light:
+        - name: "Toilet Ambient Light"
+          unique_id: toilet_ambient_light_virtual
+          state: "{{ is_state('light.tuya_ambient_light_toilet', 'on') }}"
+          turn_on:
+            action: light.turn_on
+            target:
+              entity_id: light.tuya_ambient_light_toilet
+          turn_off:
+            action: light.turn_off
+            target:
+              entity_id: light.tuya_ambient_light_toilet
+
+  # Звичайні (не шаблонні) платформи залишаються у своїх доменах
+  light:
+    - platform: switch
+      name: toilet_light
+      entity_id: switch.aqara_wall_switch_d2_toilet_left
+
+  timer:
+    toilet_light_countdown:
+      name: Світло в туалеті вимкнеться через
+      duration: "00:10:00"
+
+    toilet_fan_countdown:
+      name: Вентиляція в туалеті вимкнеться через
+      duration: "00:05:00"
+
+  automation:
+    # Вмикання живлення на підсвітку
+    - alias: toilet_ambient_supply_light_on
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.day_time_light
+      action:
+        - choose:
+            - conditions:
+                - condition: state
+                  entity_id: binary_sensor.day_time_light
+                  state: "on"
+                - condition: state
+                  entity_id: switch.aqara_switch_relay_toilet_l2
+                  state: "on"
+              sequence:
+                - action: switch.turn_off
+                  target:
+                    entity_id: switch.aqara_switch_relay_toilet_l2
+            - conditions:
+                - condition: state
+                  entity_id: binary_sensor.day_time_light
+                  state: "off"
+                - condition: state
+                  entity_id: switch.aqara_switch_relay_toilet_l2
+                  state: "off"
+              sequence:
+                - action: switch.turn_on
+                  target:
+                    entity_id: switch.aqara_switch_relay_toilet_l2
+
+    # Ввімкнення освітлення вдень
+    - alias: toilet_day_time_light_on
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_toilet_action
+          to: "single_left"
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.aqara_presence_sensor_toilet_occupancy
+          to: "on"
+      condition:
+        - condition: state
+          entity_id:
+            - binary_sensor.day_time_light
+            - binary_sensor.chill_time_light
+          match: any
+          state: "on"
+        - condition: state
+          entity_id: light.toilet_light
+          state: "off"
+      action:
+        - action: light.turn_on
+          target:
+            entity_id: light.toilet_light
+
+    # Ввімкнення освітлення вночі
+    - alias: toilet_night_light_on
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_toilet_action
+          to: "single_left"
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.aqara_presence_sensor_toilet_occupancy
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.night_time
+          state: "on"
+        - condition: state
+          entity_id: light.tuya_ambient_light_toilet
+          state: "off"
+      action:
+        - action: light.turn_on
+          target:
+            entity_id: light.tuya_ambient_light_toilet
+          data:
+            brightness: 254
+            transition: 1000
+
+    # Ввімкнення освітлення пізньої ночі
+    - alias: toilet_late_night_light_on
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_toilet_action
+          to: "single_left"
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.aqara_presence_sensor_toilet_occupancy
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.late_night_time
+          state: "on"
+        - condition: state
+          entity_id: light.tuya_ambient_light_toilet
+          state: "off"
+      action:
+        - action: light.turn_on
+          target:
+            entity_id: light.tuya_ambient_light_toilet
+          data:
+            brightness: 50
+            transition: 2000
+
+    # Вимкнення освітлення
+    - alias: toilet_light_off
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_toilet_action
+          to: "single_left"
+        # Таймер
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.toilet_light_countdown
+      action:
+        - choose:
+            - conditions:
+                - condition: state
+                  entity_id: light.toilet_light
+                  state: "on"
+              sequence:
+                - action: light.turn_off
+                  target:
+                    entity_id: light.toilet_light
+        - choose:
+            - conditions:
+                - condition: state
+                  entity_id: light.tuya_ambient_light_toilet
+                  state: "on"
+              sequence:
+                - action: light.turn_off
+                  target:
+                    entity_id: light.tuya_ambient_light_toilet
+
+    # Старт таймера витяжки при вимкненні світла
+    - alias: toilet_fan_countdown_start
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: light.toilet_light
+          to: "off"
+      condition:
+        - condition: state
+          entity_id: fan.toilet_fan
+          state: "on"
+      action:
+        - action: timer.start
+          target:
+            entity_id: timer.toilet_fan_countdown
+
+    # Таймер автовідключення
+    - alias: toilet_light_timer_start
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.toilet_no_motion
+          to: "on"
+      action:
+        - action: timer.start
+          target:
+            entity_id: timer.toilet_light_countdown
+          data:
+            duration: >
+              {%- if states("binary_sensor.night_time_light") == 'on' -%}
+                00:00:10
+              {%- elif states("binary_sensor.day_time_light") == 'on' -%}
+                00:00:30
+              {%- else -%}
+                00:00:45
+              {%- endif %}
+
+    # Скидання таймера при вимкненні
+    - alias: toilet_light_timer_cancel
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.toilet_no_motion
+          to: "off"
+      action:
+        - action: timer.cancel
+          target:
+            entity_id: timer.toilet_light_countdown
+
+    # Вмикання вентиляції
+    - alias: toilet_fan_on
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_toilet_action
+          to: "single_right"
+      condition:
+        - condition: state
+          entity_id: fan.toilet_fan
+          state: "off"
+      action:
+        - action: fan.turn_on
+          target:
+            entity_id: fan.toilet_fan
+
+    # Вимикання вентиляції
+    - alias: toilet_fan_off
+      initial_state: true
+      trigger:
+        # Вимикач Aqara
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_d2_toilet_action
+          to: "single_right"
+        # Таймер
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.toilet_fan_countdown
+      condition:
+        - condition: state
+          entity_id: fan.toilet_fan
+          state: "on"
+      action:
+        - action: fan.turn_off
+          target:
+            entity_id: fan.toilet_fan
+        - action: timer.cancel
+          target:
+            entity_id: timer.toilet_fan_countdown
+

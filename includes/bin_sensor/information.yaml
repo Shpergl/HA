@@ -1,13 +1,30 @@
-  # Air alert Kiyv
-  - platform: template
-    sensors:
-      kyiv_alert:
-        friendly_name: "Тривога Київ"
-        device_class: safety
-        value_template: >
-          {{ is_state("binary_sensor.m_kiyiv_air", "on") or
-             is_state("binary_sensor.m_kiyiv_artillery", "on") or
-             is_state("binary_sensor.m_kiyiv_chemical", "on") or
-             is_state("binary_sensor.m_kiyiv_nuclear", "on") or
-             is_state("binary_sensor.m_kiyiv_unknown", "on") or
-             is_state("binary_sensor.m_kiyiv_urban_fights", "on") }}
+- binary_sensor:
+    - name: "Тривога Київ"
+      unique_id: kyiv_air_alert_sensor
+      device_class: safety
+      state: >
+        {{ is_state("binary_sensor.m_kiyiv_air", "on") or
+            is_state("binary_sensor.m_kiyiv_artillery", "on") or
+            is_state("binary_sensor.m_kiyiv_chemical", "on") or
+            is_state("binary_sensor.m_kiyiv_nuclear", "on") or
+            is_state("binary_sensor.m_kiyiv_unknown", "on") or
+            is_state("binary_sensor.m_kiyiv_urban_fights", "on") }}
+      icon: >
+        {% if is_state("binary_sensor.m_kiyiv_air", "off") %} {{ state_attr('binary_sensor.m_kiyiv_air', 'icon') }}
+        {% elif is_state("binary_sensor.m_kiyiv_artillery", "off") %} {{ state_attr('binary_sensor.m_kiyiv_artillery', 'icon') }}
+        {% elif is_state("binary_sensor.m_kiyiv_chemical", "off") %} {{ state_attr('binary_sensor.m_kiyiv_chemical', 'icon') }}
+        {% elif is_state("binary_sensor.m_kiyiv_nuclear", "off") %} {{ state_attr('binary_sensor.m_kiyiv_nuclear', 'icon') }}
+        {% elif is_state("binary_sensor.m_kiyiv_unknown", "off") %} {{ state_attr('binary_sensor.m_kiyiv_unknown', 'icon') }}
+        {% elif is_state("binary_sensor.m_kiyiv_urban_fights", "off") %} {{ state_attr('binary_sensor.m_kiyiv_urban_fights', 'icon') }}
+        {% endif %}
+
+- sensor:
+    - name: "CPU Overspent"
+      unique_id: cpu_overspent_sensor
+      state: "{{ (states('sensor.processor_use') | int(0)) > 85 }}"
+
+
+
+    # noone_at_home:
+    #   friendly_name: "Нікого вдома"
+    #   value_template: '{{ int(states("zone.home")) < 1 }}'

@@ -1,0 +1,183 @@
+parking:
+  input_button:
+    open_parking:
+      name: Parking button
+      icon: mdi:bell
+
+  timer:
+    snooze_parking_detection_timer:
+      name: Відключення розпізнавання на парковці
+      duration: "00:01:00"
+
+  sensor:
+    - platform: statistics
+      name: recent_parking_detections
+      entity_id: binary_sensor.parking_person
+      state_characteristic: count_on
+      max_age:
+        minutes: 15
+
+    - platform: statistics
+      name: recent_parking1_detections
+      entity_id: binary_sensor.parking1_person
+      state_characteristic: count_on
+      max_age:
+        minutes: 15
+
+  automation:
+    - alias: open_parking_gate
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: input_button.open_parking
+      action:
+        - service: switch.turn_on
+          entity_id: switch.aqara_switch_relay_parking_l2
+        - delay: 1
+        - service: switch.turn_off
+          entity_id: switch.aqara_switch_relay_parking_l2
+
+    - alias: close_parking_gate
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: input_button.open_parking
+      action:
+        - service: switch.turn_on
+          entity_id: switch.aqara_switch_relay_parking_l2
+        - delay: 1
+        - service: switch.turn_off
+          entity_id: switch.aqara_switch_relay_parking_l2
+
+    - alias: open_close_parking_gate
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: input_button.open_parking
+      action:
+        - service: automation.trigger
+          entity_id: automation.open_parking_gate
+        - delay: 8
+        - service: automation.trigger
+          entity_id: automation.close_parking_gate
+
+    - alias: parking_gate_triggered
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: switch.aqara_switch_relay_parking_l2
+          to: "on"
+      action:
+        - service: notify.telegram_all
+          data:
+            message: "Parking gate triggered"
+
+    - alias: parking_send_image_on_person_detect
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.parking_person
+          to: "on"
+      action:
+        - service: camera.snapshot
+          data:
+            filename: /config/www/tmp/snapshot-parking.jpg
+          target:
+            entity_id: camera.parking_sub
+        - service: notify.telegram_all
+          data:
+            title: ""
+            message: ""
+            data:
+              photo:
+                - file: /config/www/tmp/snapshot-parking.jpg
+                  caption: A Person was detected in Parking
+
+    - alias: parking1_send_image_on_person_detect
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.parking1_person
+          to: "on"
+        - platform: state
+          entity_id: binary_sensor.parking1_person_ai
+          to: "on"
+      action:
+        - service: camera.snapshot
+          data:
+            filename: /config/www/tmp/snapshot-parking1.jpg
+          target:
+            entity_id: camera.parking1_sub
+        - service: notify.telegram_alex
+          data:
+            title: ""
+            message: ""
+            data:
+              photo:
+                - file: /config/www/tmp/snapshot-parking1.jpg
+                  caption: A Person was detected in Parking1
+
+    - alias: propose_user_to_stop_detection_spamming
+      initial_state: true
+      trigger:
+        - platform: numeric_state
+          entity_id: sensor.recent_parking_detections
+          above: 2
+        - platform: numeric_state
+          entity_id: sensor.recent_parking1_detections
+          above: 2
+      action:
+        - service: telegram_bot.send_message
+          data:
+            #target: "{{ trigger.event.data.chat_id }}"
+            message: |
+              {{'\U0001F527'}} Snooze Parking detection for:
+            inline_keyboard:
+              - '{{''\U0001F6B6''}} 5 minutes:/snooze_parking_5'
+              - '{{''\U0001F6B6''}} 10 minutes:/snooze_parking_10'
+              - '{{''\U0001F6B6''}} 15 minutes:/snooze_parking_15'
+
+    - alias: snooze_parking_detection
+      initial_state: true
+      trigger:
+        - platform: event
+          event_type: telegram_callback
+          event_data: {}
+      condition:
+        - condition: template
+          value_template: >-
+            {{ "/snooze_parking" in trigger.event.data.command }}
+      action:
+        - service: automation.turn_off
+          entity_id:
+            - automation.parking_send_image_on_person_detect
+            - automation.parking1_send_image_on_person_detect
+        - service: timer.cancel
+          entity_id: timer.snooze_parking_detection_timer
+        - service: timer.start
+          data:
+            entity_id: timer.snooze_parking_detection_timer
+            duration: "{{trigger.event.data.command.split('_')[2] |int * 60}}"
+        - service: telegram_bot.delete_message
+          data_template:
+            message_id: "{{ trigger.event.data.message.message_id }}"
+            chat_id: "{{ trigger.event.data.chat_id }}"
+        - service: notify.telegram_all
+          data:
+            message: "Snooze Parking detection for {{trigger.event.data.command.split('_')[2]}} minutes"
+
+    - alias: turn_on_parking_detction_automations_by_timer
+      initial_state: true
+      trigger:
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.snooze_parking_detection_timer
+      action:
+        - service: automation.turn_on
+          entity_id:
+            - automation.parking_send_image_on_person_detect
+            - automation.parking1_send_image_on_person_detect
+        - service: notify.telegram_all
+          data:
+            message: "Parking detection was resumed."

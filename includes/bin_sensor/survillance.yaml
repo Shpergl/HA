@@ -1,0 +1,26 @@
+
+#  - platform: rest
+#    resource: http://192.168.1.180/api.cgi?cmd=GetMdState&channel=0&user=admin&password=password
+#    name: Parking1
+#    scan_interval: 2
+#    value_template: '{{ value_json[0].value.state }}'
+#    device_class: motion
+
+#  - platform: rest
+#    resource: http://192.168.1.180/api.cgi?cmd=GetAiState&channel=0&user=admin&password=password
+#    name: Parking1 Vehicle AI
+#    scan_interval: 2
+#    value_template: '{{ value_json[0].value.vehicle.alarm_state }}'
+#    device_class: motion
+
+#  - platform: rest
+#    resource: http://192.168.1.180/api.cgi?cmd=GetAiState&channel=0&user=admin&password=password
+#    name: Parking1 Person AI
+#    scan_interval: 2
+#    value_template: '{{ value_json[0].value.people.alarm_state }}'
+#    device_class: motion
+
+binary_sensor:
+  - platform: ffmpeg_noise
+    input: FFMPEG_SUPPORTED_INPUT
+

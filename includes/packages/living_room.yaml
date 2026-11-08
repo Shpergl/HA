@@ -1,64 +1,106 @@
 living_room:
-
   homeassistant:
-     customize:
-         light.living_room_garland_light:
-           friendly_name: Гірлянда у залі
-         light.living_room_mirror_light:
-           friendly_name: Підсвітка дзеркала у залі
-         light.intellect:
-           friendly_name: Вертикальна лампа у залі
-         light.living_room_main_light:
-           friendly_name: Основне світло у залі
-         light.living_room_back_light:
-           friendly_name: Задне світло у залі
+    customize:
+      light.living_room_garland_light:
+        friendly_name: Гірлянда у залі
+      light.living_room_garland_tv_light:
+        friendly_name: Гірлянда ТВ у залі
+      light.tuya_rgb_mirror_light_living_room_2:
+        friendly_name: Дзеркало у залі
+      light.intellect:
+        friendly_name: Вертикальна лампа у залі
+      light.living_room_main_light:
+        friendly_name: Основне світло у залі
+      light.living_room_back_light:
+        friendly_name: Задне світло у залі
+      light.yeelight_strip_tv_living_room:
+        friendly_name: ТВ у залі
 
-  light:
-    - platform: template
-      lights:
-        living_room_garland_light:
-          value_template: "{{ is_state('binary_sensor.switch_2', 'on') }}"
-          turn_on:
-            - condition: state
-              entity_id: binary_sensor.switch_2
-              state: 'off'
-            - service: switch.turn_on
-              entity_id: switch.toggle_2
-          turn_off:
-            - condition: state
-              entity_id: binary_sensor.switch_2
-              state: 'on'
-            - service: switch.turn_on
-              entity_id: switch.toggle_2
+  input_boolean:
+    quest_mode:
+      name: Guest mode
+      initial: off
 
-        living_room_mirror_light:
-          value_template: "{{ is_state('binary_sensor.switch', 'on') }}"
-          turn_on:
-            - condition: state
-              entity_id: binary_sensor.switch
-              state: 'off'
-            - service: switch.turn_on
-              entity_id: switch.toggle
-          turn_off:
-            - condition: state
-              entity_id: binary_sensor.switch
-              state: 'on'
-            - service: switch.turn_on
-              entity_id: switch.toggle
+  template:
+  - binary_sensor:
+      - name: "Нікого вдома"
+        unique_id: noone_at_home_sensor
+        state: >
+          {%- if states("input_boolean.quest_mode") == 'on' -%}
+            {{ false }}
+          {%- else -%}
+            {{ states("zone.home") | int(0) < 1 }}
+          {%- endif %}
 
-        living_room_main_light:
-          value_template: "{{ is_state('switch.aqara_light_relay_living_room_l1', 'on') }}"
-          turn_on:
-            - service: switch.turn_on
-              entity_id: switch.aqara_light_relay_living_room_l1
-          turn_off:
-            - service: switch.turn_off
-              entity_id: switch.aqara_light_relay_living_room_l1
-        living_room_back_light:
-          value_template: "{{ is_state('switch.aqara_light_relay_living_room_l2', 'on') }}"
-          turn_on:
-            - service: switch.turn_on
-              entity_id: switch.aqara_light_relay_living_room_l2
-          turn_off:
-            - service: switch.turn_off
-              entity_id: switch.aqara_light_relay_living_room_l2
+  - light:
+      - name: "Tuya RGB Mirror Light Living Room"
+        unique_id: tuya_rgb_mirror_light_living_room_virtual
+        state: "{{ is_state('light.tuya_rgb_mirror_light_living_room_2', 'on') }}"
+        turn_on:
+          action: light.turn_on
+          target:
+            entity_id: light.tuya_rgb_mirror_light_living_room_2
+        turn_off:
+          action: light.turn_off
+          target:
+            entity_id: light.tuya_rgb_mirror_light_living_room_2
+
+      - name: "Living Room Garland Light"
+        unique_id: living_room_garland_light_virtual
+        state: "{{ is_state('switch.aubess_smart_socket_20a_em_3_socket_1', 'on') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: switch.aubess_smart_socket_20a_em_3_socket_1
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: switch.aubess_smart_socket_20a_em_3_socket_1
+
+      - name: "Living Room Garland TV Light"
+        unique_id: living_room_garland_tv_light_virtual
+        state: "{{ is_state('switch.aubess_smart_socket_20a_em_4_socket_1', 'on') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: switch.aubess_smart_socket_20a_em_4_socket_1
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: switch.aubess_smart_socket_20a_em_4_socket_1
+
+      - name: "Living Room Main Light"
+        unique_id: living_room_main_light_virtual
+        state: "{{ is_state('switch.aqara_light_relay_living_room_l1', 'on') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: switch.aqara_light_relay_living_room_l1
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: switch.aqara_light_relay_living_room_l1
+
+      - name: "Living Room Back Light"
+        unique_id: living_room_back_light_virtual
+        state: "{{ is_state('switch.aqara_light_relay_living_room_l2', 'on') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: switch.aqara_light_relay_living_room_l2
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: switch.aqara_light_relay_living_room_l2
+
+
+  automation:
+    - alias: guest_mode_off_when_first_enter_home
+      initial_state: true
+      trigger:
+        - platform: numeric_state
+          entity_id: zone.home
+          above: 0
+      action:
+        - service: input_boolean.turn_off
+          entity_id: input_boolean.quest_mode

@@ -1,20 +1,39 @@
-
 # Loads default set of integrations. Do not remove.
 default_config:
 
 homeassistant:
-    name: My Smart Home
-    latitude: !secret home_latitude
-    longitude: !secret home_longitude
-    elevation: 179
-    unit_system: metric
-    time_zone: Europe/Kiev
-    country: UA
-    
-    packages: !include_dir_merge_named includes/packages
+  name: My Smart Home
+  latitude: !secret home_latitude
+  longitude: !secret home_longitude
+  elevation: 179
+  unit_system: metric
+  time_zone: Europe/Kyiv
+  country: UA
+  external_url: !secret external_url
+  internal_url: !secret internal_url
 
-lovelace:
-  mode: yaml
+  packages: !include_dir_merge_named includes/packages
+
+frontend:
+  themes: !include_dir_merge_named themes
+  extra_module_url:
+    - /hacsfiles/lovelace-card-mod/card-mod.js
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    #- 172.30.32.0/24
+    - 172.30.33.0/24
+    - 10.0.0.0/8
+    #- 192.168.1.0/24
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
+#lovelace:
+#  mode: yaml
+#  resources:
+#    - url: /local/mushroom.js
+#      type: module
 
 # Text to speech
 tts:
@@ -30,33 +49,38 @@ yeelight: !include includes/yeelight.yaml
 
 #External directory includes
 sensor: !include_dir_merge_list includes/sensor
-switch: !include_dir_merge_list includes/switches
+#switch: !include_dir_merge_list includes/switches
 automation: !include_dir_merge_list includes/automation
 binary_sensor: !include_dir_merge_list includes/bin_sensor
 zone: !include includes/zones.yaml
 
 # Example configuration.yaml entry
-media_player:
-  - platform: xiaomi_tv
-    host: 192.168.1.9
-    name: Телевизор в зале
-    
-wake_on_lan: # enables `wake_on_lan` domain
-media_extractor: # enables `media_extractor` domain
-samsungtv:
-  - host: 192.168.1.23
-    name: Телевизор у вітальні
-    turn_on_action:
-      - service: wake_on_lan.send_magic_packet
-        data:
-          mac: A0:D7:F3:6D:1D:A6
+#media_player:
+#  - platform: xiaomi_tv
+#    host: 192.168.1.9
+#    name: Телевизор в зале
+
+# wake_on_lan: # enables `wake_on_lan` domain
+# media_extractor: # enables `media_extractor` domain
+# samsungtv:
+#   - host: 192.168.1.23
+#     name: Телевизор у вітальні
+#     turn_on_action:
+#       - service: wake_on_lan.send_magic_packet
+#         data:
+#           mac: A0:D7:F3:6D:1D:A6
+
+logger:
+  default: debug
 
 telegram_bot:
   - platform: polling
     api_key: !secret api_key_bot
+    parse_mode: html
     allowed_chat_ids:
       - !secret telegram_id_alex
       - !secret telegram_id_anna
+      - !secret telegram_id_mama
 
 notify:
   - name: telegram_alex
@@ -66,3 +90,20 @@ notify:
   - name: telegram_anna
     platform: telegram
     chat_id: !secret telegram_id_anna
+
+  - name: telegram_mama
+    platform: telegram
+    chat_id: !secret telegram_id_mama
+
+  - name: telegram_all
+    platform: group
+    services:
+      - service: telegram_alex
+      - service: telegram_anna
+      - service: telegram_mama
+# proximity:
+#   home:
+#     zone: home
+#     devices:
+#       - device_tracker.oleksandr
+#     tolerance: 30

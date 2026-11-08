@@ -1,13 +1,36 @@
 corridor:
-
   homeassistant:
-     customize:
-         light.corridor_light:
-           friendly_name: Світло у коридорі
-         light.front_door_light:
-           friendly_name: Світло на сходах
-         light.yeelight_strip_corridor_mirror:
-           friendly_name: Підсвітка дзеркала в коридорі
+    customize:
+      light.corridor_light:
+        friendly_name: Коридор
+      light.front_door_light:
+        friendly_name: Сходи
+      light.front_door_alarm_led:
+        friendly_name: Лампочка сигналізації
+      light.yeelight_strip_corridor_mirror:
+        friendly_name: Дзеркало в коридорі
+
+  template:
+  - binary_sensor:
+      - name: "Рух у коридорі"
+        unique_id: corridor_all_motion_sensor
+        state: >
+          {{ is_state('binary_sensor.aqara_motion_sensor_dining_room_occupancy', 'on') or 
+             is_state('binary_sensor.aqara_motion_sensor_corridor_occupancy', 'on') or
+             is_state('binary_sensor.aqara_presence_sensor_corridor_occupancy', 'on') }}
+
+      - name: "Рух на сходах"
+        unique_id: front_door_motion_sensor
+        state: >
+          {{ is_state('binary_sensor.aqara_door_sensor_front_door_contact', 'on') or 
+             is_state('binary_sensor.frontdoor1_person', 'on') or
+             is_state('binary_sensor.aqara_motion_sensor_floor_stairs_occupancy', 'on') }}
+
+
+  input_boolean:
+    dogs_bark:
+      name: Dogs are barking now
+      initial: off
 
   light:
     - platform: switch
@@ -18,67 +41,147 @@ corridor:
       name: front_door_light
       entity_id: switch.aqara_wall_switch_d2_corridor_right
 
+    - platform: switch
+      name: front_door_alarm_led
+      entity_id: switch.aqara_switch_relay_shield_corridor_l1
+
+  timer:
+    front_door_light_countdown:
+      name: Світло на сходах вимкнеться через
+      duration: "00:01:00"
+
+    front_door_motion_no_camera_detection_countdown:
+      name: Рух без виявлення камерою
+      duration: "00:01:00"
+
+  script:
+    corridor_shield_relay_check:
+      alias: Перевірка розеток роутер
+      sequence:
+        - service: switch.turn_on
+          data:
+            entity_id: switch.aqara_switch_relay_shield_corridor_l2
+        - service: notify.telegram_alex
+          data:
+            message: |
+              {{"\U0001F567"}} Розетки роутера {{ states('switch.aqara_switch_relay_shield_corridor_l2') }}
 
   automation:
-
-    # Ввімкнення освітлення
-    - alias: corridor_light_on
+    # Ввімкнення освітлення в день first sensor
+    - alias: corridor_day_time_first_sensor_light_on
       initial_state: true
       trigger:
-        # Вимикач Aqara
-       # - platform: state
-        #  entity_id: sensor.aqara_wall_switch_d2_corridor_action
-          #to: 'single_left'
-        # Датчик руху
         - platform: state
-          entity_id: binary_sensor.aqara_motion_sensor_corridor_occupancy
-          to: 'on'
+          entity_id: binary_sensor.aqara_presence_sensor_corridor_occupancy
+          to: "on"
       condition:
+        - condition: state
+          entity_id: binary_sensor.day_time_light
+          state: "on"
+        - condition: state
+          entity_id: light.corridor_light
+          state: "off"
         - condition: numeric_state
           entity_id: sensor.aqara_motion_sensor_corridor_illuminance_lux
-          below: 4
+          below: 6
       action:
-        - choose:
-          - conditions:
-              # Day time
-              - condition: state
-                entity_id: light.corridor_light
-                state: 'off'
-              - condition: state
-                entity_id: binary_sensor.day_time_light
-                state: 'on'
-            sequence:
-              - service: light.turn_on
-                entity_id: light.corridor_light
-          - conditions:
-              # Night time
-              - condition: state
-                entity_id: light.yeelight_strip_corridor_mirror
-                state: 'off'
-              - condition: state
-                entity_id: binary_sensor.night_time
-                state: 'on'
-            sequence:
-              - service: light.turn_on
-                entity_id: light.yeelight_strip_corridor_mirror
-                data:
-                  rgb_color: [ 255, 0, 255 ]
-                  brightness: 100
-          - conditions:
-              # Late night time
-              - condition: state
-                entity_id: light.yeelight_strip_corridor_mirror
-                state: 'off'
-              - condition: state
-                entity_id: binary_sensor.late_night_time
-                state: 'on'
-            sequence:
-              - service: light.turn_on
-                entity_id: light.yeelight_strip_corridor_mirror
-                data:
-                  rgb_color: [ 255, 0, 255 ]
-                  brightness: 20
+        - service: light.turn_on
+          entity_id: light.corridor_light
 
+    # Ввімкнення освітлення в день second sensor
+    - alias: corridor_day_time_second_sensor_light_on
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.aqara_motion_sensor_dining_room_occupancy
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.day_time_light
+          state: "on"
+        - condition: state
+          entity_id: light.corridor_light
+          state: "off"
+        - condition: numeric_state
+          entity_id: sensor.aqara_motion_sensor_dining_room_illuminance_lux
+          below: 6
+      action:
+        - service: light.turn_on
+          entity_id: light.corridor_light
+
+    # Ввімкнення освітлення в день door contact
+    - alias: corridor_day_time_door_sensor_light_on
+      initial_state: true
+      trigger:
+        # Датчик відкриття вхідних дверей
+        - platform: state
+          entity_id: binary_sensor.aqara_door_sensor_front_door_contact
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.day_time_light
+          state: "on"
+        - condition: state
+          entity_id: light.corridor_light
+          state: "off"
+        - condition: template
+          value_template: >
+            {{(now() - states.binary_sensor.aqara_motion_sensor_floor_stairs_occupancy.last_changed).total_seconds() < 300 }}
+      action:
+        - service: light.turn_on
+          entity_id: light.corridor_light
+
+    # Ввімкнення освітлення в ночі
+    - alias: corridor_night_light_on
+      initial_state: true
+      trigger:
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.corridor_all_motion
+          to: "on"
+        # Датчик відкриття вхідних дверей
+        - platform: state
+          entity_id: binary_sensor.aqara_door_sensor_front_door_contact
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.night_time
+          state: "on"
+        - condition: state
+          entity_id: light.yeelight_strip_corridor_mirror
+          state: "off"
+      action:
+        - service: light.turn_on
+          entity_id: light.yeelight_strip_corridor_mirror
+          data:
+            rgb_color: [255, 0, 255]
+            brightness: 100
+
+    # Ввімкнення освітлення пізньої ночі
+    - alias: corridor_late_night_light_on
+      initial_state: true
+      trigger:
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.corridor_all_motion
+          to: "on"
+        # Датчик відкриття вхідних дверей
+        - platform: state
+          entity_id: binary_sensor.aqara_door_sensor_front_door_contact
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.late_night_time
+          state: "on"
+        - condition: state
+          entity_id: light.yeelight_strip_corridor_mirror
+          state: "off"
+      action:
+        - service: light.turn_on
+          entity_id: light.yeelight_strip_corridor_mirror
+          data:
+            rgb_color: [255, 0, 255]
+            brightness: 20
 
     # Вимкнення освітлення
     - alias: corridor_light_off
@@ -86,27 +189,347 @@ corridor:
       trigger:
         # Датчик руху
         - platform: state
-          entity_id: binary_sensor.aqara_motion_sensor_corridor_occupancy
-          to: 'off'
+          entity_id: binary_sensor.corridor_all_motion
+          to: "off"
       action:
         - choose:
             - conditions:
                 - condition: state
                   entity_id: binary_sensor.day_time_light
-                  state: 'on'
+                  state: "on"
                 - condition: state
                   entity_id: light.corridor_light
-                  state: 'on'
+                  state: "on"
               sequence:
                 - service: light.turn_off
                   entity_id: light.corridor_light
             - conditions:
                 - condition: state
                   entity_id: binary_sensor.night_time_light
-                  state: 'on'
+                  state: "on"
                 - condition: state
                   entity_id: light.yeelight_strip_corridor_mirror
-                  state: 'on'
+                  state: "on"
               sequence:
                 - service: light.turn_off
                   entity_id: light.yeelight_strip_corridor_mirror
+
+    # Світло на поверсі вмикання
+    - alias: front_door_light_on
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.front_door_motion
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: light.front_door_light
+          state: "off"
+      action:
+        - service: timer.start
+          entity_id: timer.front_door_light_countdown
+        - service: light.turn_on
+          entity_id: light.front_door_light
+
+    # Світло на поверсі вимикання
+    - alias: front_door_light_off
+      initial_state: true
+      trigger:
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.front_door_light_countdown
+      condition:
+        - condition: state
+          entity_id: light.front_door_light
+          state: "on"
+      action:
+        - if:
+            - condition: state
+              entity_id: binary_sensor.front_door_motion
+              state: "on"
+          then:
+            - service: timer.start
+              entity_id: timer.front_door_light_countdown
+          else:
+            - service: light.turn_off
+              entity_id: light.front_door_light
+            - service: timer.cancel
+              entity_id: timer.front_door_light_countdown
+
+    - alias: front_door_open
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.aqara_door_sensor_front_door_contact
+          to: "on"
+      action:
+        - service: notify.telegram_all
+          data:
+            message: "Front Door opened"
+
+    - alias: front_door_close
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.aqara_door_sensor_front_door_contact
+          to: "off"
+      action:
+        - service: notify.telegram_all
+          data:
+            message: "Front Door closed"
+
+    # Перевірка розеток роутерів при старті HA
+    - alias: corridor_shield_relay_check_on_HA_start
+      initial_state: true
+      trigger:
+        - platform: homeassistant
+          event: start
+      action:
+        - delay: 00:02:00
+        - service: script.corridor_shield_relay_check
+
+    - alias: alarm_led_on_when_last_person_left_home
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.noone_at_home
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: light.front_door_alarm_led
+          state: "off"
+      action:
+        - service: light.turn_on
+          entity_id: light.front_door_alarm_led
+
+    - alias: alarm_led_off_when_first_person_entered_home
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.noone_at_home
+          to: "off"
+      condition:
+        - condition: state
+          entity_id: light.front_door_alarm_led
+          state: "on"
+      action:
+        - service: light.turn_off
+          entity_id: light.front_door_alarm_led
+
+    - alias: frontDoor1_send_image_on_person_detect
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.frontdoor1_person
+          to: "on"
+      action:
+        - service: camera.snapshot
+          data:
+            filename: /config/www/tmp/snapshot-frontdoor1.jpg
+          target:
+            entity_id: camera.frontdoor1_sub
+        - service: notify.telegram_all
+          data:
+            title: ""
+            message: ""
+            data:
+              photo:
+                file: /config/www/tmp/snapshot-frontdoor1.jpg
+                caption: "A Person was detected in FrontDoor"
+
+    - alias: start_timer_of_front_door_motion_without_detection
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.aqara_motion_sensor_floor_stairs_occupancy
+          to: "on"
+      action:
+        - service: timer.start
+          entity_id: timer.front_door_motion_no_camera_detection_countdown
+
+    - alias: send_notification_of_front_door_motion_without_detection
+      initial_state: true
+      trigger:
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.front_door_motion_no_camera_detection_countdown
+        - platform: state
+          entity_id: binary_sensor.frontdoor1_person
+          to: "on"
+      action:
+        - if:
+            - or:
+                - condition: state
+                  entity_id: binary_sensor.frontdoor1_person
+                  state: "on"
+                - condition: template
+                  value_template: >
+                    "{{(now() - states.binary_sensor.frontdoor1_person.last_changed).total_seconds() > 120 }}"
+          then:
+            - service: timer.cancel
+              entity_id: timer.front_door_motion_no_camera_detection_countdown
+          else:
+            - service: camera.snapshot
+              data:
+                filename: /config/www/tmp/snapshot-frontdoor1.jpg
+              target:
+                entity_id: camera.frontdoor1_sub
+            - service: notify.telegram_alex #telegram_all
+              data:
+                title: ""
+                message: ""
+                data:
+                  photo:
+                    file: /config/www/tmp/snapshot-frontdoor1.jpg
+                    caption: "Motion in FrontDoor without camera detection"
+
+    - alias: set_input_boolian_when_dogs_bark
+      initial_state: true
+      trigger:
+        platform: mqtt
+        topic: frigate/front_door/audio/#
+        encoding: utf-8
+      condition:
+        and:
+          - condition: state
+            entity_id: binary_sensor.noone_at_home
+            state: "on"
+          - or:
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[3] == 'yell' }}"
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[3] == 'bark' }}"
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[3] == 'speech' }}"
+              #   - condition: template
+              #    value_template: "{{ trigger.topic.split('/')[3] == 'howl' }}"
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[3] == 'bow-wow' }}"
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[3] == 'growling' }}"
+              - condition: template
+                value_template: "{{ trigger.topic.split('/')[3] == 'whimper_dog' }}"
+      action:
+        - if:
+            - condition: template
+              value_template: "{{ trigger.payload == 'ON'}}"
+          then:
+            - service: input_boolean.turn_on
+              target:
+                entity_id: input_boolean.dogs_bark
+          else:
+            - service: input_boolean.turn_off
+              target:
+                entity_id: input_boolean.dogs_bark
+
+    - alias: set_off_input_boolian_dogs_bark_when_enter_home
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.noone_at_home
+          to: "off"
+      condition:
+        - condition: state
+          entity_id: input_boolean.dogs_bark
+          state: "on"
+      action:
+        - service: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.dogs_bark
+
+    - alias: blink_corridor_light_when_dogs_bark
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: input_boolean.dogs_bark
+      action:
+        # Вмикаємо кольоровий режим камери
+        - service: select.select_option
+          target:
+            entity_id: select.frontdoor2_day_night_mode
+          data:
+            option: "color"
+        - repeat:
+            while:
+              - condition: state
+                entity_id: input_boolean.dogs_bark
+                state: "on"
+            sequence:
+              - service: light.turn_on
+                entity_id: light.corridor_light
+              # TODO delete after debug
+              #- service: notify.telegram_alex
+              #  data:
+              #    message: "Corridor light ON"
+              - delay: "00:00:04"
+              - service: light.turn_off
+                entity_id: light.corridor_light
+              - delay: "00:00:04"
+        # Вмикаємо авто режим кольору камери
+        - service: select.select_option
+          target:
+            entity_id: select.frontdoor2_day_night_mode
+          data:
+            option: "auto"
+        # Час на вмикання режиму кольору камери
+        - delay: "00:00:05"
+        - service: camera.snapshot
+          data:
+            filename: /config/www/tmp/snapshot-frontdoor2.jpg
+          target:
+            entity_id: camera.frontdoor2_sub
+        - service: notify.telegram_all
+          data:
+            title: ""
+            message: ""
+            data:
+              photo:
+                file: /config/www/tmp/snapshot-frontdoor2.jpg
+                caption: "Dogs stopped barking"
+
+    - alias: set_frontdoor2_color_mode_when_noone_at_home
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.noone_at_home
+      action:
+        - if:
+            - condition: state
+              entity_id: binary_sensor.noone_at_home
+              state: "on"
+          then:
+            - service: select.select_option
+              target:
+                entity_id: select.frontdoor2_day_night_mode
+              data:
+                option: "auto"
+          else:
+            - service: select.select_option
+              target:
+                entity_id: select.frontdoor2_day_night_mode
+              data:
+                option: "color"
+
+    #   - alias: frontDoor2
+    #     id: FD2
+    #     initial_state: true
+    #     trigger:
+    #      - platform: state
+    #       entity_id: binary_sensor.frontdoor2_person
+    #       to: 'on'
+    #     action:
+    #      - service: camera.snapshot
+    #       data:
+    #          filename: /config/www/tmp/snapshot-frontdoor2.jpg
+    #       target:
+    #          entity_id: camera.frontdoor2_sub
+    #      - service: notify.telegram_alex
+    #       data:
+    #          title: ''
+    #          message: ''
+    #          data:
+    #             photo:
+    #               file: /config/www/tmp/snapshot-frontdoor2.jpg
+    #               caption: 'A Person was detected'

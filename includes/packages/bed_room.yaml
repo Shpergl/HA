@@ -1,54 +1,133 @@
 bed_room:
-  
   homeassistant:
-     customize:
-         light.bed_room_light:
-           friendly_name: Світло у спальні
-         light.bed_room_light2:
-           friendly_name: Світло спальні2 (Не юзається зараз)
-         light.yeelight_strip_tv_bedroom:
-           friendly_name: Підсвітка ТВ в спальні
+    customize:
+      light.bed_room_light:
+        friendly_name: Спальня
+      light.yeelight_strip_tv_bedroom:
+        friendly_name: ТВ у спальні
+      cover.bed_room_curtains:
+        friendly_name: Штори у спальні
 
   light:
     - platform: switch
       name: bed_room_light
       entity_id: switch.aqara_wall_switch_D2_bed_room_left
 
-    # Not used now
-    - platform: switch
-      name: bed_room_light2
-      entity_id: switch.aqara_wall_switch_D2_bed_room_right
+  #  cover:
+  #    covers:
+  #        bed_room_curtains:
+  #          device_class: curtains
+  #
+  #
 
   automation:
-   
-    # Ввімкнення освітлення
-    - alias: bed_room_light_on
+    - alias: bed_room_light_switch_right_single
       initial_state: true
       trigger:
-        # Вимикач Aqara
         - platform: state
           entity_id: sensor.aqara_wall_switch_D2_bed_room_action
-          to: 'single_right'
-      condition:
-        - condition: state
-          entity_id: light.bed_room_light
-          state: 'off'
+          to: "single_right"
       action:
-        - service: light.turn_on
-          entity_id: light.bed_room_light
-          
-    # Вимкнення освітлення
-    - alias: bed_room_light_off
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ is_state('cover.aqara_curtains_bed_room', 'closed') }}"
+
+              sequence:
+                - service: cover.open_cover
+                  entity_id: cover.aqara_curtains_bed_room
+            - conditions:
+                - condition: template
+                  value_template: "{{ is_state('cover.aqara_curtains_bed_room', 'open') }}"
+              sequence:
+                - service: cover.close_cover
+                  entity_id: cover.aqara_curtains_bed_room
+            - conditions:
+                - condition: template
+                  value_template: "{{ state_attr('cover.aqara_curtains_bed_room', 'running') }}"
+              sequence:
+                - service: cover.stop_cover
+                  entity_id: cover.aqara_curtains_bed_room
+            - conditions:
+                - condition: template
+                  value_template:
+                    "{{ not state_attr('cover.aqara_curtains_bed_room', 'running') and
+                    0 < (state_attr('cover.aqara_curtains_bed_room', 'current_position')|int) < 100  }}"
+              sequence:
+                - service: cover.open_cover
+                  entity_id: cover.aqara_curtains_bed_room
+
+    - alias: bed_room_light_switch_right_double
       initial_state: true
       trigger:
-        # Вимикач Aqara
         - platform: state
           entity_id: sensor.aqara_wall_switch_D2_bed_room_action
-          to: 'single_right'
+          to: "double_right"
+      condition:
+        "{{ not state_attr('cover.aqara_curtains_bed_room', 'running') and
+        0 < (state_attr('cover.aqara_curtains_bed_room', 'current_position')|int) < 100 }}"
+      action:
+        - service: cover.close_cover
+          entity_id: cover.aqara_curtains_bed_room
+
+    - alias: bed_room_close_curtains_in_evening
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.evening_time
+          to: "on"
       condition:
         - condition: state
-          entity_id: light.bed_room_light
-          state: 'on'
+          entity_id: cover.aqara_curtains_bed_room
+          state: "open"
       action:
-        - service: light.turn_off
-          entity_id: light.bed_room_light
+        - service: cover.close_cover
+          entity_id: cover.aqara_curtains_bed_room
+
+    - alias: bed_room_close_curtains_in_evening
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.evening_time
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: cover.aqara_curtains_bed_room
+          state: "open"
+      action:
+        - service: cover.close_cover
+          entity_id: cover.aqara_curtains_bed_room
+
+    - alias: bed_room_open_curtains_slowly
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.day_time
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: cover.aqara_curtains_bed_room
+          state: "closed"
+      action:
+        - repeat:
+            while:
+              - condition: template
+                value_template: "{{bool(state_attr('cover.aqara_curtains_bed_room', 'position')) < 100}}"
+            sequence:
+              - service: cover.set_cover_position
+                entity_id: cover.aqara_curtains_bed_room
+                data:
+                  position: "{{int(state_attr('cover.aqara_curtains_bed_room', 'position')) + 10}}"
+              - delay: "00:00:20"
+
+    - alias: bed_room_light_switch_right_triple
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: sensor.aqara_wall_switch_D2_bed_room_action
+          to: "triple_right"
+      action:
+        - service: cover.set_cover_position
+          entity_id: cover.aqara_curtains_bed_room
+          data:
+            position: "10"

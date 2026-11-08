@@ -1,0 +1,107 @@
+kitchen:
+  homeassistant:
+    customize:
+      light.kitchen_light:
+        friendly_name: Кухня
+
+  template:
+    - binary_sensor:
+        - name: "Автовідключення світла у кухні"
+          unique_id: kitchen_no_motion_sensor
+          state: >
+            {{ is_state('light.kitchen_light', 'on') and 
+              is_state('binary_sensor.aqara_presence_sensor_kitchen_occupancy', 'off') }}
+          icon: >-
+            {% if is_state("binary_sensor.kitchen_no_motion", "on") %}
+              mdi:timer
+            {% else %}
+              mdi:timer-off
+            {% endif %}
+
+
+  light:
+    - platform: switch
+      name: kitchen_light
+      entity_id: switch.aqara_wall_switch_d1_kitchen
+
+  timer:
+    kitchen_light_countdown:
+      name: Світло в кухні вимкнеться через
+      duration: "00:10:00"
+
+  automation:
+    # Ввімкнення освітлення ввечері
+    - alias: kitchen_day_time_light_on
+      initial_state: true
+      trigger:
+        # Датчик руху
+        - platform: state
+          entity_id: binary_sensor.aqara_presence_sensor_kitchen_occupancy
+          to: "on"
+      condition:
+        - condition: state
+          entity_id: binary_sensor.evening_time
+          state: "on"
+        - condition: state
+          entity_id: light.kitchen_light
+          state: "off"
+      action:
+        - action: light.turn_on
+          target:
+            entity_id: light.kitchen_light
+
+    # Таймер автовідключення
+    - alias: kitchen_light_timer_start
+      initial_state: true
+      trigger:
+        # Умови для запуска таймера автовідключення
+        - platform: state
+          entity_id: binary_sensor.kitchen_no_motion
+          to: "on"
+      action:
+        - action: timer.start
+          target:
+            entity_id: timer.kitchen_light_countdown
+          data:
+            duration: >
+              {%- if states("binary_sensor.night_time_light") == 'on' -%}
+                00:00:10
+              {%- elif states("binary_sensor.day_time_light") == 'on'  -%}
+                00:00:30
+              {%- else -%}
+                00:00:45
+              {%- endif %}
+
+    # Вимкнення освітлення
+    - alias: kitchen_light_off
+      initial_state: true
+      trigger:
+        # Таймер
+        - platform: event
+          event_type: timer.finished
+          event_data:
+            entity_id: timer.kitchen_light_countdown
+      action:
+        - choose:
+            - conditions:
+                - condition: state
+                  entity_id: light.kitchen_light
+                  state: "on"
+              sequence:
+                - action: light.turn_off
+                  target:
+                    entity_id: light.kitchen_light
+
+    # Скидання таймера при вимкненні
+    - alias: kitchen_light_timer_cancel
+      initial_state: true
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.kitchen_no_motion
+          to: "off"
+      action:
+        - action: timer.cancel
+          target:
+            entity_id: timer.kitchen_light_countdown
+
+

@@ -2,10 +2,10 @@
   icon: mdi:home
   latitude: !secret home_latitude
   longitude: !secret home_longitude
-  radius: 20
+  radius: 10
 
 - name: Garage
   icon: mdi:garage
   latitude: !secret garage_latitude
   longitude: !secret garage_longitude
-  radius: 20
+  radius: 10
