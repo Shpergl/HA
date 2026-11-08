@@ -14,7 +14,7 @@ telegram_control:
       action:
         - service: telegram_bot.send_message
           data:
-            target: "{{ trigger.event.data.user_id }}"
+            chat_id: "{{ trigger.event.data.user_id }}"
             message: |
               {{'\U0001F527'}} Оберіть кімнату для керування :
             inline_keyboard:
@@ -43,35 +43,6 @@ telegram_control:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ trigger.event.data.command == '/menu_back' }}"
-              sequence:
-                - service: telegram_bot.delete_message
-                  data_template:
-                    message_id: "{{ trigger.event.data.message.message_id }}"
-                    chat_id: "{{ trigger.event.data.chat_id }}"
-                - service: telegram_bot.send_message
-                  data:
-                    target: "{{ trigger.event.data.chat_id }}"
-                    message: |
-                      {{'\U0001F527'}} Выбрать комнату для управления :
-                    inline_keyboard:
-                      - '{{''\U0001F6B6''}} Вход:/en_control , {{''\U0001F6C0''}} Санузел:/bt_control'
-                      - '{{''\U0001F3E2''}} Гостиная:/lr_control , {{''\U0001F374''}} Кухня:/kn_control'
-                      - '{{''\U0001F6B9''}} Детская Д:/dd_control , {{''\U0001F6BA''}} Детская А:/da_control'
-                      - '{{''\U0001F6AB''}} Убрать меню:/menu_hide'
-
-    # ## Автоматизация управления главным меню
-    - id: Главное меню управления телеграм
-      alias: telegram_menu_control
-      initial_state: true
-      trigger:
-        - platform: event
-          event_type: telegram_callback
-          event_data: {}
-      action:
-        - choose:
-            - conditions:
-                - condition: template
                   value_template: "{{ trigger.event.data.command == '/menu_hide' }}"
               sequence:
                 - service: telegram_bot.delete_message
@@ -89,7 +60,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: |
                       {{'\U0001F527'}} Выбрать комнату для управления :
                     inline_keyboard:
@@ -118,7 +89,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: &msg_en |
                       {{'\U0001F6B6'}} Управление прихожая, коридор :
                       {{'\U0001F6AA'}} Входная дверь - {% if is_state('binary_sensor.0x00158d000119378d_contact', 'on') %} Открыта {% else %} Закрыта {% endif %}
@@ -151,7 +122,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_en
                     inline_keyboard: *keyb_en
             - conditions:
@@ -174,7 +145,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_en
                     inline_keyboard: *keyb_en
 
@@ -198,7 +169,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: &msg_bt |
                       {{'\U0001F6C0'}} Управление туалет, прачечная, ванная :
                       Туалет - 
@@ -234,7 +205,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_bt
                     inline_keyboard: *keyb_bt
             - conditions:
@@ -256,7 +227,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_bt
                     inline_keyboard: *keyb_bt
             - conditions:
@@ -279,7 +250,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_bt
                     inline_keyboard: *keyb_bt
             - conditions:
@@ -301,7 +272,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_bt
                     inline_keyboard: *keyb_bt
             - conditions:
@@ -324,7 +295,7 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_bt
                     inline_keyboard: *keyb_bt
             - conditions:
@@ -347,6 +318,6 @@ telegram_control:
                     chat_id: "{{ trigger.event.data.chat_id }}"
                 - service: telegram_bot.send_message
                   data:
-                    target: "{{ trigger.event.data.chat_id }}"
+                    chat_id: "{{ trigger.event.data.chat_id }}"
                     message: *msg_bt
                     inline_keyboard: *keyb_bt

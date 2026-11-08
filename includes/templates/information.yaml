@@ -1,5 +1,6 @@
 - binary_sensor:
     - name: "Тривога Київ"
+      default_entity_id: binary_sensor.kyiv_alert
       unique_id: kyiv_air_alert_sensor
       device_class: safety
       state: >

@@ -61,8 +61,9 @@ corridor:
         - service: switch.turn_on
           data:
             entity_id: switch.aqara_switch_relay_shield_corridor_l2
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: |
               {{"\U0001F567"}} Розетки роутера {{ states('switch.aqara_switch_relay_shield_corridor_l2') }}
 
@@ -264,8 +265,12 @@ corridor:
           entity_id: binary_sensor.aqara_door_sensor_front_door_contact
           to: "on"
       action:
-        - service: notify.telegram_all
+        - action: telegram_bot.send_message
           data:
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
             message: "Front Door opened"
 
     - alias: front_door_close
@@ -275,8 +280,12 @@ corridor:
           entity_id: binary_sensor.aqara_door_sensor_front_door_contact
           to: "off"
       action:
-        - service: notify.telegram_all
+        - action: telegram_bot.send_message
           data:
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
             message: "Front Door closed"
 
     # Перевірка розеток роутерів при старті HA
@@ -329,14 +338,14 @@ corridor:
             filename: /config/www/tmp/snapshot-frontdoor1.jpg
           target:
             entity_id: camera.frontdoor1_sub
-        - service: notify.telegram_all
+        - action: telegram_bot.send_photo
           data:
-            title: ""
-            message: ""
-            data:
-              photo:
-                file: /config/www/tmp/snapshot-frontdoor1.jpg
-                caption: "A Person was detected in FrontDoor"
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
+            file: /config/www/tmp/snapshot-frontdoor1.jpg
+            caption: "A Person was detected in FrontDoor"
 
     - alias: start_timer_of_front_door_motion_without_detection
       initial_state: true
@@ -376,14 +385,11 @@ corridor:
                 filename: /config/www/tmp/snapshot-frontdoor1.jpg
               target:
                 entity_id: camera.frontdoor1_sub
-            - service: notify.telegram_alex #telegram_all
+            - action: telegram_bot.send_photo
               data:
-                title: ""
-                message: ""
-                data:
-                  photo:
-                    file: /config/www/tmp/snapshot-frontdoor1.jpg
-                    caption: "Motion in FrontDoor without camera detection"
+                chat_id: !secret telegram_id_alex
+                file: /config/www/tmp/snapshot-frontdoor1.jpg
+                caption: "Motion in FrontDoor without camera detection"
 
     - alias: set_input_boolian_when_dogs_bark
       initial_state: true
@@ -480,14 +486,14 @@ corridor:
             filename: /config/www/tmp/snapshot-frontdoor2.jpg
           target:
             entity_id: camera.frontdoor2_sub
-        - service: notify.telegram_all
+        - action: telegram_bot.send_photo
           data:
-            title: ""
-            message: ""
-            data:
-              photo:
-                file: /config/www/tmp/snapshot-frontdoor2.jpg
-                caption: "Dogs stopped barking"
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
+            file: /config/www/tmp/snapshot-frontdoor2.jpg
+            caption: "Dogs stopped barking"
 
     - alias: set_frontdoor2_color_mode_when_noone_at_home
       initial_state: true
