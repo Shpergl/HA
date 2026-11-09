@@ -68,8 +68,12 @@ parking:
           entity_id: switch.aqara_switch_relay_parking_l2
           to: "on"
       action:
-        - service: notify.telegram_all
+        - action: telegram_bot.send_message
           data:
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
             message: "Parking gate triggered"
 
     - alias: parking_send_image_on_person_detect
@@ -83,15 +87,17 @@ parking:
           data:
             filename: /config/www/tmp/snapshot-parking.jpg
           target:
-            entity_id: camera.parking_sub
-        - service: notify.telegram_all
+            entity_id: >-
+              {{ ['camera.parking_snapshots_clear', 'camera.parking_clear', 'camera.parking_main']
+                 | select('has_value') | first | default('camera.parking_sub') }}
+        - action: telegram_bot.send_photo
           data:
-            title: ""
-            message: ""
-            data:
-              photo:
-                - file: /config/www/tmp/snapshot-parking.jpg
-                  caption: A Person was detected in Parking
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
+            file: /config/www/tmp/snapshot-parking.jpg
+            caption: A Person was detected in Parking
 
     - alias: parking1_send_image_on_person_detect
       initial_state: true
@@ -107,15 +113,14 @@ parking:
           data:
             filename: /config/www/tmp/snapshot-parking1.jpg
           target:
-            entity_id: camera.parking1_sub
-        - service: notify.telegram_alex
+            entity_id: >-
+              {{ ['camera.parking1_snapshots_clear', 'camera.parking1_clear', 'camera.parking1_main']
+                 | select('has_value') | first | default('camera.parking1_sub') }}
+        - action: telegram_bot.send_photo
           data:
-            title: ""
-            message: ""
-            data:
-              photo:
-                - file: /config/www/tmp/snapshot-parking1.jpg
-                  caption: A Person was detected in Parking1
+            chat_id: !secret telegram_id_alex
+            file: /config/www/tmp/snapshot-parking1.jpg
+            caption: A Person was detected in Parking1
 
     - alias: propose_user_to_stop_detection_spamming
       initial_state: true
@@ -162,8 +167,12 @@ parking:
           data_template:
             message_id: "{{ trigger.event.data.message.message_id }}"
             chat_id: "{{ trigger.event.data.chat_id }}"
-        - service: notify.telegram_all
+        - action: telegram_bot.send_message
           data:
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
             message: "Snooze Parking detection for {{trigger.event.data.command.split('_')[2]}} minutes"
 
     - alias: turn_on_parking_detction_automations_by_timer
@@ -178,6 +187,10 @@ parking:
           entity_id:
             - automation.parking_send_image_on_person_detect
             - automation.parking1_send_image_on_person_detect
-        - service: notify.telegram_all
+        - action: telegram_bot.send_message
           data:
+            chat_id:
+              - !secret telegram_id_alex
+              - !secret telegram_id_anna
+              - !secret telegram_id_mama
             message: "Parking detection was resumed."

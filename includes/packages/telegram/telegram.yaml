@@ -26,16 +26,18 @@ telegramm:
     send_my_love:
       alias: send my love
       sequence:
-        - service: notify.telegram_anna
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_anna
             message: |
               I love you ! {{"\U0001F495"}}{{"\U0001F495"}}{{"\U0001F495"}}
 
     system_report:
       alias: Отправка отчета о состоянии системы
       sequence:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: |
               {{"\U0001F4AC"}} Головний сервер IntelNuc
               {{"\U0001F4A1"}} Ламп недоступно - {{ states('sensor.unavailable_now_light') }} 
@@ -51,8 +53,9 @@ telegramm:
         - platform: homeassistant
           event: start
       action:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: |
               {{"\U0001F4AC"}} Головний сервер IntelNuc
               {{"\U0001F567"}} Зафіксований запуск об {{ states('sensor.time') }} 
@@ -74,7 +77,7 @@ telegramm:
       action:
         - service: telegram_bot.send_message
           data:
-            target: "{{ trigger.event.data.user_id }}"
+            chat_id: "{{ trigger.event.data.user_id }}"
             message: |
               {{"\U0001F4AC"}} Головний сервер IntelNuc
               {{"\U0001F567"}} Звіт через {{ states('sensor.time_date') }}
@@ -91,8 +94,9 @@ telegramm:
           entity_id: zone.home
           above: 0
       action:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: >
               {% for p in state_attr('zone.home', 'persons') %}
               " {{ p }} first enter Home"
@@ -106,8 +110,9 @@ telegramm:
           entity_id: zone.home
           below: 1
       action:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: >
               {% for p in state_attr('zone.home', 'persons') %}
               " {{ p }} last exit Home"
@@ -119,8 +124,9 @@ telegramm:
         - platform: state
           entity_id: sensor.myip
       action:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             title: "⚠️ *Public IP changed*"
             message: "From {{ trigger.from_state.state }} to {{ trigger.to_state.state }}"
 
@@ -148,6 +154,7 @@ telegramm:
               - condition: template
                 value_template: "{{ trigger.topic.split('/')[3] == 'whimper_dog' }}"
       action:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: "mdi:dog {{trigger.topic.split('/')[3]}} state: {{ trigger.payload }}"

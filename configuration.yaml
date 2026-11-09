@@ -52,6 +52,8 @@ sensor: !include_dir_merge_list includes/sensor
 #switch: !include_dir_merge_list includes/switches
 automation: !include_dir_merge_list includes/automation
 binary_sensor: !include_dir_merge_list includes/bin_sensor
+template: !include includes/templates/information.yaml
+sql: !include includes/sql.yaml
 zone: !include includes/zones.yaml
 
 # Example configuration.yaml entry
@@ -73,34 +75,7 @@ zone: !include includes/zones.yaml
 logger:
   default: debug
 
-telegram_bot:
-  - platform: polling
-    api_key: !secret api_key_bot
-    parse_mode: html
-    allowed_chat_ids:
-      - !secret telegram_id_alex
-      - !secret telegram_id_anna
-      - !secret telegram_id_mama
-
-notify:
-  - name: telegram_alex
-    platform: telegram
-    chat_id: !secret telegram_id_alex
-
-  - name: telegram_anna
-    platform: telegram
-    chat_id: !secret telegram_id_anna
-
-  - name: telegram_mama
-    platform: telegram
-    chat_id: !secret telegram_id_mama
-
-  - name: telegram_all
-    platform: group
-    services:
-      - service: telegram_alex
-      - service: telegram_anna
-      - service: telegram_mama
+# Configure Telegram Bot, HTML parsing and the three allowed chats in the UI.
 # proximity:
 #   home:
 #     zone: home

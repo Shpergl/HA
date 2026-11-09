@@ -91,6 +91,7 @@ time_of_day:
           entity_id: sensor.current_light_mode_by_time
           to: "evening"
       action:
-        - service: notify.telegram_alex
+        - action: telegram_bot.send_message
           data:
+            chat_id: !secret telegram_id_alex
             message: "Evening is comming... - {{ states('sensor.time') }} "

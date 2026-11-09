@@ -20,7 +20,7 @@
 #    value_template: '{{ value_json[0].value.people.alarm_state }}'
 #    device_class: motion
 
-binary_sensor:
-  - platform: ffmpeg_noise
-    input: FFMPEG_SUPPORTED_INPUT
+# Example only. Supply a real audio source before enabling this platform.
+# - platform: ffmpeg_noise
+#   input: FFMPEG_SUPPORTED_INPUT
 
