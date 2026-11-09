@@ -342,7 +342,7 @@ corridor:
             entity_id: >-
               {{ ['camera.frontdoor1_snapshots_clear', 'camera.frontdoor1_clear', 'camera.frontdoor1_main']
                  | select('has_value') | first | default('camera.frontdoor1_sub') }}
-        - action: telegram_bot.send_document
+        - action: telegram_bot.send_photo
           data:
             chat_id:
               - !secret telegram_id_alex
@@ -391,7 +391,7 @@ corridor:
                 entity_id: >-
                   {{ ['camera.frontdoor1_snapshots_clear', 'camera.frontdoor1_clear', 'camera.frontdoor1_main']
                      | select('has_value') | first | default('camera.frontdoor1_sub') }}
-            - action: telegram_bot.send_document
+            - action: telegram_bot.send_photo
               data:
                 chat_id: !secret telegram_id_alex
                 file: /config/www/tmp/snapshot-frontdoor1-motion.jpg
@@ -494,7 +494,7 @@ corridor:
             entity_id: >-
               {{ ['camera.frontdoor2_snapshots_clear', 'camera.frontdoor2_clear', 'camera.frontdoor2_main']
                  | select('has_value') | first | default('camera.frontdoor2_sub') }}
-        - action: telegram_bot.send_document
+        - action: telegram_bot.send_photo
           data:
             chat_id:
               - !secret telegram_id_alex
